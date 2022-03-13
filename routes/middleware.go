@@ -8,4 +8,5 @@ import (
 
 func MiddleWare(c *fiber.Ctx) error {
 	fmt.Println("Request")
+	return nil
 }
