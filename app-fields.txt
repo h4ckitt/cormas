@@ -1,0 +1,227 @@
+=== User/(Business|page) FIELDS:
+
+- Name
+- Email
+- Username
+- Password
+- Avatar
+- Cover
+- Address [ Address table ]
+- Moderation [int 1,2,3]
+- IsBusiness [int 1,2,3]
+- Verified bool
+- Assets [Assets Table]
+- Premium [int 1,2,3]
+- Amount [float]
+- LastIP
+- UserAgent
+- Balance [float]
+- Currency [Currency table]
+- Bank [Balance Table]
+- Order [Order table] <user, business>
+- Post [ Post table ]
+- Review [ Review table ]
+- Follow [ User table ] ~ Array (count)
+- Owner [User] ~ Array (count)
+- Editor [User] ~ Array (count)
+- Publisher [ User ] ~ Array (count)
+- Category [ Category table ] ~ Single
+- Sale [ Order table ] <business>
+- Privacy [int 1, 2, 3] (1: everything is public, 2: turn request follow mode on, 3: no one can follow this user)
+- CreatedAt
+- UpdatedAt
+
+=== Address Table
+- Product [Product Table]
+- Name
+- Address 1
+- Address 2
+- City
+- State
+- Country
+- Latitude
+- Longitude
+- Log IP
+- Status [int 1,2,3]
+- Moderation [int 1,2,3]
+- User [User table]
+- Business [User table]
+- Post [ Post table ]
+- Comment [ Comment table ]
+- Order [ Order table ]
+- Review [ Review table ]
+- Qna [ Qna table ]
+
+=== Category Fields
+
+- Name
+- Icon
+- Moderation [int 1,2,3]
+- Status [int 1,2,3]
+- Product [Product Table]
+- Author [User table] <admin | end_user>
+- Business [User Table]
+- Child [Category table] <subcategory>
+
+=== Group Fields
+- Name
+- Icon
+- About
+- Status [int 1,2,3]
+- Moderation [int 1,2,3]
+- Owner [User]
+- Editor [User]
+- Publisher [User]
+- Child [ Group table ] <subgroup>
+- CreatedAt
+- UpdatedAt
+
+=== POST FIELDS
+
+- Message
+- Author [User table] <post_author>
+- Business [Business table] ~ can be empty <author_business>
+- Order [Order table]
+- CreatedAt
+- Privacy (int 1,2,3)
+- Address [ Address table ]
+- UpdatedAt
+- Type
+- Moderation (int 1,2,3)
+- Currency [currency table] == $
+- Amount [float] e.g $120
+- Reaction [Reaction table]
+- Tags [Hashtag table]
+
+footnote: if amount is not zero, only users/businesses that have made an order can view the post.
+
+=== QnA
+
+- Title
+- Description
+- Tags [Hashtag table]
+- Status [int 1,2,3]
+- Moderation [int 1,2,3]
+- Privacy [int 1,2,3]
+- Author [User]
+- Address [Address table]
+- CreatedAt
+- UpdatedAt
+- Comments [Comments table]
+- Reaction [Reaction table]
+
+=== Comment
+
+- Title
+- Description
+- Owner [User]
+- Address [Address table]
+- Type
+- Reply [ Comment table ]
+- Moderation [int 1,2,3]
+- Reaction [ Reaction table ]
+- CreatedAt
+- UpdatedAt
+
+=== Reaction
+
+- PostType (UID)
+- Reaction Type [Int 1, 2, 3, 4, 5, 6, 7]
+- Owner [User table]
+- CreatedAt
+- UpdatedAt
+
+
+=== Product
+
+- Title
+- Regular Price
+- Selling Price
+- Currency [ Currency table]
+- Color
+- Size
+.....
+- Hashtags [Hashtag table]
+- Category [Category Table]
+- Variants [Product Table]
+- Order [Order table]
+- Review [Review table]
+- Type [int 1,2,3] ~ physical, digital, services
+- Supported [int 1: supported,2: not supported,3: null]
+- Downloadable [Assets table]
+- Thumbnail [Assets table]
+- Gallery [ Assets table ]
+- Excerpt
+- Description
+- Technical Information
+- Additional Information
+- Product Information
+- Product Guides
+- Status [int 1,2,3]
+- Moderation [int 1,2,3]
+- Address [Address Table]
+- Owner [Business table] required
+- Author [User table]
+- Category [Category Table]
+
+=== Review
+- Business [User Table]
+- Product [Product Table]
+- Rating [int 1,2,3,4,5]
+- Title
+- Description
+- Status [int 1,2]
+- Author [User Table]
+- Assets [Assets Table]
+- Moderation [int 1,2,3]
+
+=== Assets (Image/Video)
+
+- Path
+- Type ( e.g, 1,2.. ( 1=> Image, 2=>Video))
+- CreatedAt
+- UpdatedAt
+- Owner [User table]
+- Business [ Business table]
+- Product [ Product table]
+- Post [ Post table ]
+- Comment [ Comment table ]
+- Review [ Review table ]
+- Qna [ Qna Table]
+- Moderation bool
+
+=== Balance
+- Amount
+- Currency [ Currency Table ]
+- Owner [User table]
+- Status [int 1: active ,2: pending]
+- Moderation bool
+- CreatedAt
+- UpdatedAt
+
+Only businesses can sell products
+
+====== ORDER table
+
+- Post [ Post table ]
+- Product [ Product table ]
+- TransactionID
+- Sender [User table]
+- Business [User table]
+- Receiver [User table]
+- Status [int 1,2,3]
+- Moderation bool
+- Coupon [Coupon table]
+- Amount [float]
+- Currency [Currency table]
+- CreatedAt
+- UpdatedAt
+- UserAgent
+
+=== CURRENCY Table
+- Name
+- ICON
+- Value
+- Status [int 1,2,3]
+- CreatedAt
+- UpdatedAt
