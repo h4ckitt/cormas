@@ -2,11 +2,20 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"rest-api/controllers"
 )
 
-func InitRouter() {
+//const secretkey = "Mr.RavandraIsTheB3sTUpw0rKCl13nt"
+func InitRouter() *fiber.App {
 	app := fiber.New()
 
-	v1 := app.Group("/v1", MiddleWare)
+	/*app.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte(secretkey),
+	}))*/
+	//x := controllers.SignUpHandler
+	v1 := app.Group("/v1")
 
+	userGroup := v1.Group("/user")
+	userGroup.Get("/", controllers.Unimplemented)
+	return app
 }
