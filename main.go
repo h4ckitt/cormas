@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"rest-api/routes"
 
 	"github.com/dgraph-io/dgo"
 	"github.com/dgraph-io/dgo/protos/api"
@@ -20,5 +20,7 @@ func newClient() *dgo.Dgraph {
 }
 
 func main() {
-	fmt.Println("vim-go")
+	if err := routes.InitRouter().Listen(":8080"); err != nil {
+		log.Fatal(err)
+	}
 }
