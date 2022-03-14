@@ -5,12 +5,11 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
+	"rest-api/config"
 	"rest-api/models"
 	"strconv"
 	"time"
 )
-
-const secretkey = "Mr.RavandraIsTheB3sTUpw0rKCl13nt"
 
 func decodeToken(token *jwt.Token) models.User {
 	claims := token.Claims.(jwt.StandardClaims)
@@ -68,7 +67,7 @@ func Login(c *fiber.Ctx) error {
 		ExpiresAt: time.Now().Add(1 * time.Hour).Unix(),
 	})
 
-	token, err := claims.SignedString([]byte(secretkey))
+	token, err := claims.SignedString([]byte(config.GetConfig().SecretKey))
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
