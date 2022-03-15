@@ -1,7 +1,7 @@
 package models
 
 type Review struct {
-	Title       string   `json:"title"`
+	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Author      User     `json:"author"`
 	Assets      []*Asset `json:"assets,omitempty"`
