@@ -8,7 +8,8 @@ import (
 func setupUserRoutes(router fiber.Router) {
 	userGroup := router.Group("/user")
 	userGroup.Post("/", controllers.SignUpHandler)
+	userGroup.Post("/login", controllers.Login)
 
-	userGroup.Use(JWTMiddleWare)
+	//userGroup.Use(JWTMiddleWare)
 
 }

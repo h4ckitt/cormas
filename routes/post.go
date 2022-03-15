@@ -11,5 +11,4 @@ func setupPostRoutes(router fiber.Router) {
 	postGroup.Use(JWTMiddleWare)
 
 	postGroup.Post("/", controllers.CreatePost)
-
 }
