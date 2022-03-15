@@ -1,39 +1,73 @@
 package controllers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/dgraph-io/dgo"
+	"github.com/dgraph-io/dgo/protos/api"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 	"rest-api/config"
+	"rest-api/db"
 	"rest-api/models"
 	"strconv"
 	"time"
 )
 
-func decodeToken(token *jwt.Token) models.User {
-	claims := token.Claims.(jwt.StandardClaims)
-	uid := claims.Issuer
-
-	//logic to fetch user from db using extracted uid
-	fmt.Println(uid)
-
-	return models.User{}
-}
-
 func SignUpHandler(c *fiber.Ctx) error {
-	var data map[string]string
+	dgraph := db.GetDB()
 
-	if err := c.BodyParser(&data); err != nil {
+	txn := dgraph.NewTxn()
+
+	defer func(txn *dgo.Txn, ctx context.Context) {
+		err := txn.Discard(ctx)
+		if err != nil {
+
+		}
+	}(txn, context.TODO())
+
+	user := new(models.User)
+	//var data map[string]string
+
+	if err := c.BodyParser(user); err != nil {
+		fmt.Println("An Error Occured: ", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(err)
 	}
 
-	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 12)
+	if user.Name == "" || user.Password == "" || user.Email == "" || user.Username == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "bad request body received",
+		})
+	}
 
-	user := models.User{
-		Name:     data["name"],
-		Email:    data["email"],
-		Password: string(password),
+	//fmt.Println(data)
+
+	password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+
+	user.Password = string(password)
+
+	userBody, err := json.Marshal(user)
+
+	if err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again",
+		})
+	}
+
+	mu := &api.Mutation{
+		SetJson: userBody,
+	}
+
+	mu.CommitNow = true
+
+	_, err = txn.Mutate(context.TODO(), mu)
+
+	if err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred",
+		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
