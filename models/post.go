@@ -10,6 +10,7 @@ type Post struct {
 	Address    *[]Address `json:"address"`
 	Moderation bool       `json:"moderation"`
 	Currency   *Currency  `json:"currency"`
+	Comment    *[]Comment `json:"comment"`
 	Amount     float64    `json:"amount"`
 	Reaction   *Reaction  `json:"reaction"`
 	Assets     *[]Asset   `json:"asset"`

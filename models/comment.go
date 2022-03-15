@@ -10,6 +10,7 @@ type Comment struct {
 	Address     Address     `json:"address,omitempty"`
 	Reply       *[]Comment  `json:"reply,omitempty"`
 	Reaction    *[]Reaction `json:"reaction"`
+	Post		Post        `json:"post"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAT   time.Time   `json:"updated_at"`
 }
