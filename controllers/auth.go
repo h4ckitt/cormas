@@ -1,28 +1,29 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
-	"rest-api/config"
+	"log"
+	"rest-api/db"
 	"rest-api/models"
-	"strconv"
+	"rest-api/utils"
 	"time"
 )
 
+var dgraph = db.GetDB()
+
 func SignUpHandler(c *fiber.Ctx) error {
-	//dgraph := db.GetDB()
 
 	user := new(models.User)
 
-	var data map[string]interface{}
-	//var data map[string]string
-
 	if err := c.BodyParser(user); err != nil {
-		fmt.Println("An Error Occured: ", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(err)
+		log.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again Later",
+		})
 	}
 
 	if user.Name == "" || user.Password == "" || user.Email == "" || user.Username == "" {
@@ -31,15 +32,32 @@ func SignUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	//fmt.Println(data)
+	mutation := &api.Mutation{CommitNow: true}
 
-	password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+	user.Type = "User"
+	userJson, err := json.Marshal(user)
 
-	user.Password = string(password)
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again Later",
+		})
+	}
 
-	userBody, err := json.Marshal(user)
+	mutation.SetJson = userJson
 
-	json.Unmarshal(userBody, &data)
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again Later",
+		})
+	}
+
+	//password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+
+	user.Password = ""
 
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
@@ -47,50 +65,73 @@ func SignUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	//response, err := dgraph.Mutation().Set(data).Execute(context.Background())
-
-	/*if err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"message": "An Error Occurred: " + err.Error(),
-		})
-	}*/
-
-	//	fmt.Println(response.Raw.Uids)
-
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
 func Login(c *fiber.Ctx) error {
-	var (
-		data map[string]string
-		user models.User
-	)
 
-	if err := c.BodyParser(&data); err != nil {
+	loginData := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+
+	authData := struct {
+		Result []struct {
+			Uid   string `json:"uid"`
+			Valid bool   `json:"validPass"`
+		} `json:"auth"`
+	}{}
+
+	if err := c.BodyParser(&loginData); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(err)
 	}
 
-	//fetch user info from db logic here
-
-	if user.UID == 0 {
-		c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Invalid Credentials",
+	if loginData.Email == "" || loginData.Password == "" {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "Invalid Message Body Received",
 		})
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])); err != nil {
-		c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Invalid Credentials",
-		})
-	}
-	claims := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.StandardClaims{
-		Issuer:    strconv.Itoa(int(user.UID)),
-		ExpiresAt: time.Now().Add(1 * time.Hour).Unix(),
-	})
+	fmt.Println(loginData.Password)
+	variables := map[string]string{"$email": loginData.Email, "$pass": loginData.Password}
 
-	token, err := claims.SignedString([]byte(config.GetConfig().SecretKey))
+	q :=
+		`
+		query User($email: string, $pass: string){
+			auth(func: type(User)) @filter(eq(email, $email)) {
+				uid
+				validPass: checkpwd(password,$pass)
+			}
+		}
+	`
+
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variables)
 
 	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing That Request, Please Try Again",
+		})
+	}
+
+	err = json.Unmarshal(resp.Json, &authData)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing The Request, Please Try Again",
+		})
+	}
+
+	if !authData.Result[0].Valid {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Email Or Password Invalid",
+		})
+	}
+
+	token, err := utils.GenerateJWTCookie(authData.Result[0].Uid)
+
+	if err != nil {
+		log.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "An Error Occurred, Please Try Again Later",
 		})
