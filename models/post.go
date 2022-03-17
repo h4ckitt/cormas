@@ -3,8 +3,8 @@ package models
 type Post struct {
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
-	Author      *User       `json:"author"`
-	Business    *User       `json:"business"`
+	Author      interface{} `json:"author"`
+	Business    interface{} `json:"business"`
 	Orders      *[]Order    `json:"orders"`
 	Privacy     int         `json:"privacy"`
 	Address     Address     `json:"address"`
@@ -15,4 +15,5 @@ type Post struct {
 	Reactions   *[]Reaction `json:"reactions,omitempty"`
 	Assets      *[]Asset    `json:"assets,omitempty"`
 	Tags        *[]HashTag  `json:"tags,omitempty"`
+	Type        string      `json:"dgraph.type"`
 }
