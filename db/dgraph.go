@@ -3,19 +3,19 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/dgraph-io/dgo"
+	"github.com/dgraph-io/dgo/protos/api"
+	"google.golang.org/grpc"
 
-	//	"github.com/fenos/dqlx"
-	//"github.com/dgraph-io/dgo"
-	//"github.com/dgraph-io/dgo/protos/api"
-	"github.com/fenos/dqlx"
 	//"google.golang.org/grpc"
 	"log"
 )
 
-//var db *dgo.Dgraph
-var db dqlx.DB
+var db *dgo.Dgraph
 
-func CreateSchema(drop bool) {
+//var db dqlx.DB
+
+/*func CreateSchema(drop bool) {
 	schema := db.Schema()
 
 	if drop {
@@ -231,48 +231,330 @@ func CreateSchema(drop bool) {
 
 	fmt.Println("End Of Schema")
 
+}*/
+
+func DropAll() {
+	if err := db.Alter(context.Background(), &api.Operation{DropAll: true}); err != nil {
+		log.Println("Couldn't Wipe Database, Work With What You Have")
+		return
+	}
+
+	log.Println("Wiped Database Successfully")
+}
+
+func CreateSchema() {
+	op := api.Operation{}
+
+	op.Schema = `
+			name: string @index(exact) .
+			moderation: int @index(int) .
+			user_agent: string .
+			privacy: int .
+			amount: float .
+			created_at: datetime .
+			updated_at: datetime .
+			status: int .
+			icon: string .
+			description: string .
+			username: string @index(hash) .
+			email: string @index(hash) .
+			is_business: bool . 
+			verified: bool .
+			password: password .
+			avatar: string .
+			cover: string .
+			last_ip: string .
+			User.user_agent: string .
+			User.balance: float .
+			User.address: [uid] .
+			User.currency: uid .
+			User.bank: uid .
+			User.orders: [uid] .
+			User.invoices: [uid] .
+			User.posts: [uid] .
+			User.reviews: [uid] .
+			User.owners: [uid] .
+			User.editor: uid .
+			User.publisher: uid .
+			User.category: uid .
+			User.sales: [uid] .
+			User.sales_invoices: [uid] .
+			Post.author: uid @reverse . 
+			Post.business: uid .
+			Post.orders: [uid] .
+			Post.address: uid .
+			Post.currency: uid .
+			Post.comments: [uid] .
+			Post.reactions: [uid] .
+			Post.tags: [uid] .
+			Post.assets: [uid] .
+			Order.transaction_id: string .
+			Order.business: uid .
+			Order.sender: uid .
+			Order.receiver: uid .
+			Order.currency: uid .
+			Order.posts: [uid] .
+			Order.products: [uid] .
+			Address.address_1: string .
+			Address.address_2: string .
+			Address.city: string .
+			Address.country: string .
+			Asset.image: string .
+			Asset.video: string .
+			Asset.document: string .
+			Asset.zip: string .
+			Asset.post: uid @reverse .
+			Asset.comment: uid @reverse .
+			Asset.review: uid @reverse .
+			Currency.value: string .
+			Balance.currency: uid .
+			Category.child: [uid] @reverse .
+			Comment.author: uid @reverse .
+			Comment.post: uid @reverse .
+			Comment.reactions: [uid] .
+			Comment.replies: [uid] .
+			Comment.address: uid .
+			Invoice.order: uid .
+			Invoice.buyer: uid .
+			Product.supported: int .
+			Product.type: int .
+			Product.excerpt: string .
+			Product.technical_information: string .
+			Product.additional_information: string .
+			Product.product_information: string .
+			Product.product_guides: string .
+			Product.regular_price: float .
+			Product.selling_price: float .
+			Product.address: uid .
+			Product.owner: uid @reverse .
+			Product.currency: uid .
+			Product.category: uid .
+			Product.reviews: [uid] .
+			Product.thumbnail: string .
+			Product.downloadable: [uid] .
+			Product.gallery: [uid] .
+			Question.tags: [uid] .
+			Question.comments: [uid] .
+			Question.reactions: [uid] .
+			Review.rating: int .
+			Review.product: uid @reverse .
+			Review.author: uid @reverse .
+			Review.business: uid .
+			Review.assets: [uid] .
+
+			type User {
+				name
+				moderation
+				privacy
+				created_at
+				updated_at
+				amount
+				username
+				email
+				is_business
+				verified
+				password
+				avatar
+				cover
+				last_ip
+				User.user_agent
+				User.balance
+				User.address: [Address]
+				User.currency: Currency
+				User.bank: Balance
+				User.orders: [Order]
+				User.invoices: [Invoice]
+				User.posts: [Post]
+				User.reviews: [Review]
+				User.owners: [User]
+				User.editor: User
+				User.publisher: User
+				User.category: Category
+				User.sales: [Order]
+				User.sales_invoices: [Invoice]
+			}
+
+			type Post {
+				name
+				description
+				privacy
+				moderation
+				amount
+				Post.author: User
+				Post.business: User
+				Post.orders: [Order]
+				Post.address: Address
+				Post.currency: Currency
+				Post.comments: [Comment]
+				Post.reactions: [Reaction]
+				Post.tags: [HashTag]
+				Post.assets: [Asset]
+			}
+
+			type Order {
+				status
+				amount
+				moderation
+				user_agent
+				created_at
+				updated_at
+				Order.transaction_id
+				Order.business: User
+				Order.sender: User
+				Order.receiver: User
+				Order.currency: Currency
+				Order.posts: [Post]
+				Order.products: [Product]
+			}
+
+			type Address {
+				name
+				status
+				moderation
+				Address.address_1
+				Address.address_2
+				Address.city
+				Address.country
+			
+			}
+
+			type Asset {
+				name
+				created_at
+				updated_at
+				moderation
+				Asset.image
+				Asset.video
+				Asset.document
+				Asset.zip
+				Asset.post: Post
+				Asset.comment: Comment
+				Asset.review: Review
+			}
+
+			type Currency {
+				name
+				icon
+				status
+				created_at
+				updated_at
+				Currency.value
+			}
+
+			type Balance {
+				amount
+				status
+				moderation
+				created_at
+				updated_at
+				Balance.currency: Currency
+			}
+
+			type Category {
+				name
+				icon
+				moderation
+				status
+				Category.child: [Category]
+			}
+
+			type Comment {
+				description
+				moderation
+				created_at
+				updated_at
+				Comment.author: User
+				Comment.post: Post
+				Comment.reactions: [Reaction]
+				Comment.replies: [Comment]
+				Comment.address: Address
+			}
+
+			type Invoice {
+				status
+				created_at
+				updated_at
+				Invoice.order: Order
+				Invoice.buyer: User
+			}
+
+			type Product {
+				name
+				description
+				moderation
+				status
+				Product.supported
+				Product.type
+				Product.excerpt
+				Product.technical_information
+				Product.additional_information
+				Product.product_information
+				Product.product_guides
+				Product.regular_price
+				Product.selling_price
+				Product.address: Address
+				Product.owner: User
+				Product.currency: Currency
+				Product.category: Category
+				Product.reviews: [Review]
+				Product.thumbnail
+				Product.downloadable: [Asset]
+				Product.gallery: [Asset]
+			}
+
+			type Question {
+				name
+				description
+				status
+				moderation
+				privacy
+				created_at
+				updated_at
+				Question.tags: [HashTag]
+				Question.comments: [Comment]
+				Question.reactions: [Reaction]
+			}
+
+			type Review {
+				name
+				description
+				moderation
+				Review.rating
+				Review.product: Product
+				Review.author: User
+				Review.business: User
+				Review.assets: [Asset]
+			}
+
+			type Reaction {
+				name
+			}
+
+			type HashTag {
+				name
+			}
+	`
+
+	if err := db.Alter(context.Background(), &op); err != nil {
+		log.Println("Couldn't Create The Schema, Work With What You Have: ", err)
+	}
+
 }
 
 func init() {
 	fmt.Println("init function here")
 	var err error
-	db, err = dqlx.Connect("localhost:9080")
-	/*conn, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		db = dgo.NewDgraphClient(api.NewDgraphClient(conn))
-
-		op := &api.Operation{}
-
-		op.Schema = `
-			name: string @index(exact) .
-			email: string @index(hash) .
-			username: string @index(hash) .
-			password: string .
-			verified: bool .
-			LastIP: string .
-			Premium: int .
-			isBusiness: bool .
-			moderation: int .
-			privacy: int .
-			Follows: [uid] @count .
-
-			type User {
-				name: string
-				email: string
-				username: string
-				password: string
-				address: [
-	`*/
+	//db, err = dqlx.Connect("localhost:9080")
+	conn, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
 
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	db = dgo.NewDgraphClient(api.NewDgraphClient(conn))
+
 }
 
-func GetDB() dqlx.DB {
+func GetDB() *dgo.Dgraph {
 	return db
 }
