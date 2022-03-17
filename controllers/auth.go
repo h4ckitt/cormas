@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -96,7 +95,6 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Println(loginData.Password)
 	variables := map[string]string{"$email": loginData.Email, "$pass": loginData.Password}
 
 	q :=
