@@ -10,11 +10,11 @@ type User struct {
 	Password     string     `json:"password,omitempty"`
 	Avatar       string     `json:"avatar,omitempty"`
 	Cover        string     `json:"cover,omitempty"`
-	Addresses    *[]Address `json:"address"`
+	Addresses    *[]Address `json:"addresses"`
 	Moderation   bool       `json:"moderation"`
 	IsBusiness   bool       `json:"is_business"`
 	Verified     bool       `json:"verified"`
-	Assets       *Asset     `json:"assets"` //This Should Be Reversed From Either Product Or Post
+	Assets       *Asset     `json:"assets,omitempty"` //This Should Be Reversed From Either Product Or Post
 	Premium      int        `json:"premium"`
 	Amount       float64    `json:"amount,omitempty"`
 	LastIP       string     `json:"last_ip"`
@@ -33,4 +33,5 @@ type User struct {
 	Privacy      int        `json:"privacy"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	Type         string     `json:"dgraph.type"`
 }
