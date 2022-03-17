@@ -7,8 +7,5 @@ import (
 
 func setupAnswerRoutes(router fiber.Router) {
 	answerGroup := router.Group("/answer")
-
-	answerGroup.Use(JWTMiddleWare)
-
 	answerGroup.Post("/", controllers.CreateAnswer)
 }

@@ -8,7 +8,5 @@ import (
 func setupPostRoutes(router fiber.Router) {
 	postGroup := router.Group("/post")
 
-	postGroup.Use(JWTMiddleWare)
-
-	postGroup.Post("/", controllers.CreatePost)
+	postGroup.Post("/", authRequired(), controllers.CreatePost)
 }
