@@ -2,26 +2,24 @@ package utils
 
 import (
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"rest-api/config"
-	"rest-api/models"
+	"github.com/golang-jwt/jwt/v4"
 	"time"
+
+	"rest-api/config"
 )
 
-func GetJWTUser(token *jwt.Token) models.User {
-	claims := token.Claims.(jwt.StandardClaims)
-	uid := claims.Issuer
+func GetJWTUser(token *jwt.Token) string {
+	claims := token.Claims.(jwt.MapClaims)
 
-	//logic to fetch user from db using extracted uid
-	fmt.Println(uid)
+	uid := claims["uid"]
 
-	return models.User{}
+	return uid.(string)
 }
 
 func GenerateJWTCookie(uid string) (string, error) {
-	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer:    uid,
-		ExpiresAt: time.Now().Add(1 * time.Hour).Unix(),
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"uid":     uid,
+		"expires": time.Now().Add(1 * time.Hour),
 	})
 
 	fmt.Println(config.GetConfig().SecretKey)
