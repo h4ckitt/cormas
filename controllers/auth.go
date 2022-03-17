@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v4"
 	"log"
 	"rest-api/db"
 	"rest-api/models"
@@ -35,6 +36,9 @@ func SignUpHandler(c *fiber.Ctx) error {
 	mutation := &api.Mutation{CommitNow: true}
 
 	user.Type = "User"
+	now := time.Now().Format(time.RFC3339)
+	user.CreatedAt = now
+	user.UpdatedAt = now
 	userJson, err := json.Marshal(user)
 
 	if err != nil {
@@ -65,7 +69,7 @@ func SignUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(user)
+	return c.Status(fiber.StatusCreated).JSON(user)
 }
 
 func Login(c *fiber.Ctx) error {
@@ -147,5 +151,57 @@ func Login(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User Logged In Successfully",
+	})
+}
+
+func Update(c *fiber.Ctx) error {
+	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	updatedUser := struct {
+		UID       string `json:"uid"`
+		Cover     string `json:"cover,omitempty"`
+		Avatar    string `json:"avatar,omitempty"`
+		Username  string `json:"username,omitempty"`
+		UpdatedAt string `json:"updated_at"`
+	}{}
+
+	if err := c.BodyParser(&updatedUser); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request Body Request Received",
+		})
+	}
+
+	if updatedUser.Cover == "" && updatedUser.Avatar == "" && updatedUser.Username == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request Body Request Received",
+		})
+	}
+
+	updatedUser.UID = uid
+	updatedUser.UpdatedAt = time.Now().Format(time.RFC3339)
+
+	updatedJsonBody, err := json.Marshal(updatedUser)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing That Request, Please Try Again Later",
+		})
+	}
+
+	mutation := &api.Mutation{
+		CommitNow: true,
+		SetJson:   updatedJsonBody,
+	}
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing This Request, Please Try Again",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "User Updated Successfully",
 	})
 }
