@@ -1,21 +1,19 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 	"rest-api/config"
-	"rest-api/db"
 	"rest-api/models"
 	"strconv"
 	"time"
 )
 
 func SignUpHandler(c *fiber.Ctx) error {
-	dgraph := db.GetDB()
+	//dgraph := db.GetDB()
 
 	user := new(models.User)
 
@@ -49,15 +47,15 @@ func SignUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	response, err := dgraph.Mutation().Set(data).Execute(context.Background())
+	//response, err := dgraph.Mutation().Set(data).Execute(context.Background())
 
-	if err != nil {
+	/*if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
 			"message": "An Error Occurred: " + err.Error(),
 		})
-	}
+	}*/
 
-	fmt.Println(response.Raw.Uids)
+	//	fmt.Println(response.Raw.Uids)
 
 	return c.Status(fiber.StatusOK).JSON(user)
 }
