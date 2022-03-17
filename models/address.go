@@ -2,8 +2,8 @@ package models
 
 type Address struct {
 	Name       string `json:"name"`
-	Address1   string `json:"address_1"`
-	Address2   string `json:"address_2,omitempty"`
+	Address1   string `json:"address1"`
+	Address2   string `json:"address2,omitempty"`
 	City       string `json:"city"`
 	State      string `json:"state"`
 	Country    string `json:"country"`
