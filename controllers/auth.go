@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/dgo"
-	"github.com/dgraph-io/dgo/protos/api"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -19,16 +17,9 @@ import (
 func SignUpHandler(c *fiber.Ctx) error {
 	dgraph := db.GetDB()
 
-	txn := dgraph.NewTxn()
-
-	defer func(txn *dgo.Txn, ctx context.Context) {
-		err := txn.Discard(ctx)
-		if err != nil {
-
-		}
-	}(txn, context.TODO())
-
 	user := new(models.User)
+
+	var data map[string]interface{}
 	//var data map[string]string
 
 	if err := c.BodyParser(user); err != nil {
@@ -50,25 +41,23 @@ func SignUpHandler(c *fiber.Ctx) error {
 
 	userBody, err := json.Marshal(user)
 
+	json.Unmarshal(userBody, &data)
+
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
 			"message": "An Error Occurred, Please Try Again",
 		})
 	}
 
-	mu := &api.Mutation{
-		SetJson: userBody,
-	}
-
-	mu.CommitNow = true
-
-	_, err = txn.Mutate(context.TODO(), mu)
+	response, err := dgraph.Mutation().Set(data).Execute(context.Background())
 
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"message": "An Error Occurred",
+			"message": "An Error Occurred: " + err.Error(),
 		})
 	}
+
+	fmt.Println(response.Raw.Uids)
 
 	return c.Status(fiber.StatusOK).JSON(user)
 }

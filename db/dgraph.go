@@ -1,6 +1,9 @@
 package db
 
 import (
+	"context"
+	"fmt"
+
 	//	"github.com/fenos/dqlx"
 	//"github.com/dgraph-io/dgo"
 	//"github.com/dgraph-io/dgo/protos/api"
@@ -12,8 +15,12 @@ import (
 //var db *dgo.Dgraph
 var db dqlx.DB
 
-func createSchema() {
+func CreateSchema(drop bool) {
 	schema := db.Schema()
+
+	if drop {
+		schema.Alter(context.Background(), dqlx.WithDropAllSchema(true))
+	}
 
 	name := schema.Predicate("name", dqlx.ScalarString)
 	moderation := schema.Predicate("moderation", dqlx.ScalarBool)
@@ -28,7 +35,7 @@ func createSchema() {
 
 	schema.Type("User", func(user *dqlx.TypeBuilder) {
 		user.Predicate(name)
-		user.String("username")
+		user.String("username").IndexExact()
 		user.Password("password")
 		user.String("avatar")
 		user.String("cover")
@@ -222,9 +229,12 @@ func createSchema() {
 		hashtag.Predicate(name)
 	})
 
+	fmt.Println("End Of Schema")
+
 }
 
 func init() {
+	fmt.Println("init function here")
 	var err error
 	db, err = dqlx.Connect("localhost:9080")
 	/*conn, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
@@ -261,8 +271,6 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	createSchema()
 }
 
 func GetDB() dqlx.DB {
