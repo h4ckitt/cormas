@@ -14,14 +14,15 @@ func main() {
 
 	flag.Parse()
 
+	if *dropTable {
+		db.DropAll()
+	}
+
 	if *createSchema {
-		if *dropTable {
-			db.CreateSchema(true)
-		} else {
-			db.CreateSchema(false)
-		}
+		db.CreateSchema()
 
 	}
+	
 	if err := routes.InitRouter().Listen(":8081"); err != nil {
 		log.Fatal(err)
 	}
