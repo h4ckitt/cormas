@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
-	"github.com/dgraph-io/dgo"
-	"github.com/dgraph-io/dgo/protos/api"
+	"github.com/dgraph-io/dgo/v210"
+	"github.com/dgraph-io/dgo/v210/protos/api"
 	"google.golang.org/grpc"
 
 	//"google.golang.org/grpc"
@@ -264,83 +264,62 @@ func CreateSchema() {
 			avatar: string .
 			cover: string .
 			last_ip: string .
-			User.user_agent: string .
-			User.balance: float .
-			User.address: [uid] .
-			User.currency: uid .
-			User.bank: uid .
-			User.orders: [uid] .
-			User.invoices: [uid] .
-			User.posts: [uid] .
-			User.reviews: [uid] .
-			User.owners: [uid] .
-			User.editor: uid .
-			User.publisher: uid .
-			User.category: uid .
-			User.sales: [uid] .
-			User.sales_invoices: [uid] .
-			Post.author: uid @reverse . 
-			Post.business: uid .
-			Post.orders: [uid] .
-			Post.address: uid .
-			Post.currency: uid .
-			Post.comments: [uid] .
-			Post.reactions: [uid] .
-			Post.tags: [uid] .
-			Post.assets: [uid] .
-			Order.transaction_id: string .
-			Order.business: uid .
-			Order.sender: uid .
-			Order.receiver: uid .
-			Order.currency: uid .
-			Order.posts: [uid] .
-			Order.products: [uid] .
-			Address.address_1: string .
-			Address.address_2: string .
-			Address.city: string .
-			Address.country: string .
-			Asset.image: string .
-			Asset.video: string .
-			Asset.document: string .
-			Asset.zip: string .
-			Asset.post: uid @reverse .
-			Asset.comment: uid @reverse .
-			Asset.review: uid @reverse .
-			Currency.value: string .
-			Balance.currency: uid .
-			Category.child: [uid] @reverse .
-			Comment.author: uid @reverse .
-			Comment.post: uid @reverse .
-			Comment.reactions: [uid] .
-			Comment.replies: [uid] .
-			Comment.address: uid .
-			Invoice.order: uid .
-			Invoice.buyer: uid .
-			Product.supported: int .
-			Product.type: int .
-			Product.excerpt: string .
-			Product.technical_information: string .
-			Product.additional_information: string .
-			Product.product_information: string .
-			Product.product_guides: string .
-			Product.regular_price: float .
-			Product.selling_price: float .
-			Product.address: uid .
-			Product.owner: uid @reverse .
-			Product.currency: uid .
-			Product.category: uid .
-			Product.reviews: [uid] .
-			Product.thumbnail: string .
-			Product.downloadable: [uid] .
-			Product.gallery: [uid] .
-			Question.tags: [uid] .
-			Question.comments: [uid] .
-			Question.reactions: [uid] .
-			Review.rating: int .
-			Review.product: uid @reverse .
-			Review.author: uid @reverse .
-			Review.business: uid .
-			Review.assets: [uid] .
+			balance: float .
+			addresses: [uid] .
+			currency: uid .
+			bank: uid .
+			orders: [uid] .
+			invoices: [uid] .
+			posts: [uid] .
+			reviews: [uid] .
+			owners: [uid] .
+			editor: uid .
+			publisher: uid .
+			category: uid .
+			sales: [uid] .
+			sales_invoices: [uid] .
+			author: uid @reverse . 
+			business: uid .
+			address: uid .
+			comments: [uid] .
+			reactions: [uid] .
+			tags: [uid] .
+			assets: [uid] .
+			transaction_id: string .
+			sender: uid .
+			receiver: uid .
+			products: [uid] .
+			address1: string .
+			address2: string .
+			city: string .
+			country: string .
+			image: string .
+			video: string .
+			document: string .
+			zip: string .
+			post: uid @reverse .
+			comment: uid @reverse .
+			review: uid @reverse .
+			value: string .
+			child: [uid] @reverse .
+			replies: [uid] .
+			order: uid .
+			buyer: uid .
+			supported: int .
+			type: int .
+			excerpt: string .
+			technical_information: string .
+			additional_information: string .
+			product_information: string .
+			product_guides: string .
+			regular_price: float .
+			selling_price: float .
+			owner: uid @reverse .
+			thumbnail: string .
+			downloadable: [uid] .
+			gallery: [uid] .
+			rating: int .
+			product: uid @reverse .
 
 			type User {
 				name
@@ -357,21 +336,21 @@ func CreateSchema() {
 				avatar
 				cover
 				last_ip
-				User.user_agent
-				User.balance
-				User.address: [Address]
-				User.currency: Currency
-				User.bank: Balance
-				User.orders: [Order]
-				User.invoices: [Invoice]
-				User.posts: [Post]
-				User.reviews: [Review]
-				User.owners: [User]
-				User.editor: User
-				User.publisher: User
-				User.category: Category
-				User.sales: [Order]
-				User.sales_invoices: [Invoice]
+				user_agent
+				balance
+				addresses: [Address]
+				currency: Currency
+				bank: Balance
+				orders: [Order]
+				invoices: [Invoice]
+				posts: [Post]
+				reviews: [Review]
+				owners: [User]
+				editor: User
+				publisher: User
+				category: Category
+				sales: [Order]
+				sales_invoices: [Invoice]
 			}
 
 			type Post {
@@ -380,15 +359,15 @@ func CreateSchema() {
 				privacy
 				moderation
 				amount
-				Post.author: User
-				Post.business: User
-				Post.orders: [Order]
-				Post.address: Address
-				Post.currency: Currency
-				Post.comments: [Comment]
-				Post.reactions: [Reaction]
-				Post.tags: [HashTag]
-				Post.assets: [Asset]
+				author: User
+				business: User
+				orders: [Order]
+				address: Address
+				currency: Currency
+				comments: [Comment]
+				reactions: [Reaction]
+				tags: [HashTag]
+				assets: [Asset]
 			}
 
 			type Order {
@@ -398,23 +377,23 @@ func CreateSchema() {
 				user_agent
 				created_at
 				updated_at
-				Order.transaction_id
-				Order.business: User
-				Order.sender: User
-				Order.receiver: User
-				Order.currency: Currency
-				Order.posts: [Post]
-				Order.products: [Product]
+				transaction_id
+				business: User
+				sender: User
+				receiver: User
+				currency: Currency
+				posts: [Post]
+				products: [Product]
 			}
 
 			type Address {
 				name
 				status
 				moderation
-				Address.address_1
-				Address.address_2
-				Address.city
-				Address.country
+				address1
+				address2
+				city
+				country
 			
 			}
 
@@ -423,13 +402,13 @@ func CreateSchema() {
 				created_at
 				updated_at
 				moderation
-				Asset.image
-				Asset.video
-				Asset.document
-				Asset.zip
-				Asset.post: Post
-				Asset.comment: Comment
-				Asset.review: Review
+				image
+				video
+				document
+				zip
+				post: Post
+				comment: Comment
+				review: Review
 			}
 
 			type Currency {
@@ -438,7 +417,7 @@ func CreateSchema() {
 				status
 				created_at
 				updated_at
-				Currency.value
+				value
 			}
 
 			type Balance {
@@ -447,7 +426,7 @@ func CreateSchema() {
 				moderation
 				created_at
 				updated_at
-				Balance.currency: Currency
+				currency: Currency
 			}
 
 			type Category {
@@ -455,7 +434,7 @@ func CreateSchema() {
 				icon
 				moderation
 				status
-				Category.child: [Category]
+				child: [Category]
 			}
 
 			type Comment {
@@ -463,19 +442,19 @@ func CreateSchema() {
 				moderation
 				created_at
 				updated_at
-				Comment.author: User
-				Comment.post: Post
-				Comment.reactions: [Reaction]
-				Comment.replies: [Comment]
-				Comment.address: Address
+				author: User
+				post: Post
+				reactions: [Reaction]
+				replies: [Comment]
+				address: Address
 			}
 
 			type Invoice {
 				status
 				created_at
 				updated_at
-				Invoice.order: Order
-				Invoice.buyer: User
+				order: Order
+				buyer: User
 			}
 
 			type Product {
@@ -483,23 +462,23 @@ func CreateSchema() {
 				description
 				moderation
 				status
-				Product.supported
-				Product.type
-				Product.excerpt
-				Product.technical_information
-				Product.additional_information
-				Product.product_information
-				Product.product_guides
-				Product.regular_price
-				Product.selling_price
-				Product.address: Address
-				Product.owner: User
-				Product.currency: Currency
-				Product.category: Category
-				Product.reviews: [Review]
-				Product.thumbnail
-				Product.downloadable: [Asset]
-				Product.gallery: [Asset]
+				supported
+				type
+				excerpt
+				technical_information
+				additional_information
+				product_information
+				product_guides
+				regular_price
+				selling_price
+				address: Address
+				owner: User
+				currency: Currency
+				category: Category
+				reviews: [Review]
+				thumbnail
+				downloadable: [Asset]
+				gallery: [Asset]
 			}
 
 			type Question {
@@ -510,20 +489,20 @@ func CreateSchema() {
 				privacy
 				created_at
 				updated_at
-				Question.tags: [HashTag]
-				Question.comments: [Comment]
-				Question.reactions: [Reaction]
+				tags: [HashTag]
+				comments: [Comment]
+				reactions: [Reaction]
 			}
 
 			type Review {
 				name
 				description
 				moderation
-				Review.rating
-				Review.product: Product
-				Review.author: User
-				Review.business: User
-				Review.assets: [Asset]
+				rating
+				product: Product
+				author: User
+				business: User
+				assets: [Asset]
 			}
 
 			type Reaction {
