@@ -1,9 +1,7 @@
 package models
 
-import "time"
-
 type User struct {
-	UID          uint64     `json:"uid"`
+	UID          string     `json:"uid"`
 	Name         string     `json:"name"`
 	Email        string     `json:"email"`
 	Username     string     `json:"username"`
@@ -31,7 +29,7 @@ type User struct {
 	Sales        *[]Order   `json:"sales,omitempty"`
 	SaleInvoices *[]Invoice `json:"sale_invoices,omitempty"`
 	Privacy      int        `json:"privacy"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	CreatedAt    string     `json:"created_at,omitempty"`
+	UpdatedAt    string     `json:"updated_at,omitempty"`
 	Type         string     `json:"dgraph.type"`
 }
