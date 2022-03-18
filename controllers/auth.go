@@ -3,37 +3,27 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"github.com/dgraph-io/dgo"
-	"github.com/dgraph-io/dgo/protos/api"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
-	"rest-api/config"
+	"github.com/golang-jwt/jwt/v4"
+	"log"
 	"rest-api/db"
 	"rest-api/models"
-	"strconv"
+	"rest-api/utils"
 	"time"
 )
 
+var dgraph = db.GetDB()
+
 func SignUpHandler(c *fiber.Ctx) error {
-	dgraph := db.GetDB()
-
-	txn := dgraph.NewTxn()
-
-	defer func(txn *dgo.Txn, ctx context.Context) {
-		err := txn.Discard(ctx)
-		if err != nil {
-
-		}
-	}(txn, context.TODO())
 
 	user := new(models.User)
-	//var data map[string]string
 
 	if err := c.BodyParser(user); err != nil {
-		fmt.Println("An Error Occurred: ", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(err)
+		log.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again Later",
+		})
 	}
 
 	if user.Name == "" || user.Password == "" || user.Email == "" || user.Username == "" {
@@ -42,13 +32,35 @@ func SignUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	//fmt.Println(data)
+	mutation := &api.Mutation{CommitNow: true}
 
-	password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+	user.Type = "User"
+	now := time.Now().Format(time.RFC3339)
+	user.CreatedAt = now
+	user.UpdatedAt = now
+	userJson, err := json.Marshal(user)
 
-	user.Password = string(password)
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again Later",
+		})
+	}
 
-	userBody, err := json.Marshal(user)
+	mutation.SetJson = userJson
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred, Please Try Again Later",
+		})
+	}
+
+	//password, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+
+	user.Password = ""
 
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
@@ -56,54 +68,72 @@ func SignUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	mu := &api.Mutation{
-		SetJson: userBody,
-	}
-
-	mu.CommitNow = true
-
-	_, err = txn.Mutate(context.TODO(), mu)
-
-	if err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"message": "An Error Occurred",
-		})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(user)
+	return c.Status(fiber.StatusCreated).JSON(user)
 }
 
 func Login(c *fiber.Ctx) error {
-	var (
-		data map[string]string
-		user models.User
-	)
 
-	if err := c.BodyParser(&data); err != nil {
+	loginData := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+
+	authData := struct {
+		Result []struct {
+			Uid   string `json:"uid"`
+			Valid bool   `json:"validPass"`
+		} `json:"auth"`
+	}{}
+
+	if err := c.BodyParser(&loginData); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(err)
 	}
 
-	//fetch user info from db logic here
-
-	if user.UID == 0 {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Invalid Credentials",
+	if loginData.Email == "" || loginData.Password == "" {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "Invalid Message Body Received",
 		})
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])); err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Invalid Credentials",
-		})
-	}
-	claims := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.StandardClaims{
-		Issuer:    strconv.Itoa(int(user.UID)),
-		ExpiresAt: time.Now().Add(1 * time.Hour).Unix(),
-	})
+	variables := map[string]string{"$email": loginData.Email, "$pass": loginData.Password}
 
-	token, err := claims.SignedString([]byte(config.GetConfig().SecretKey))
+	q :=
+		`
+		query User($email: string, $pass: string){
+			auth(func: type(User)) @filter(eq(email, $email)) {
+				uid
+				validPass: checkpwd(password,$pass)
+			}
+		}
+	`
+
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variables)
 
 	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing That Request, Please Try Again",
+		})
+	}
+
+	err = json.Unmarshal(resp.Json, &authData)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing The Request, Please Try Again",
+		})
+	}
+
+	if !authData.Result[0].Valid {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Email Or Password Invalid",
+		})
+	}
+
+	token, err := utils.GenerateJWTCookie(authData.Result[0].Uid)
+
+	if err != nil {
+		log.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "An Error Occurred, Please Try Again Later",
 		})
@@ -119,5 +149,68 @@ func Login(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User Logged In Successfully",
+	})
+}
+
+func Update(c *fiber.Ctx) error {
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
+
+	updatedUser := struct {
+		UID       string `json:"uid"`
+		Cover     string `json:"cover,omitempty"`
+		Avatar    string `json:"avatar,omitempty"`
+		Username  string `json:"username,omitempty"`
+		UpdatedAt string `json:"updated_at"`
+	}{}
+
+	if err := c.BodyParser(&updatedUser); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request Body Request Received",
+		})
+	}
+
+	if updatedUser.Cover == "" && updatedUser.Avatar == "" && updatedUser.Username == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad Request Body Request Received",
+		})
+	}
+
+	updatedUser.UID = uid
+	updatedUser.UpdatedAt = time.Now().Format(time.RFC3339)
+
+	updatedJsonBody, err := json.Marshal(updatedUser)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing That Request, Please Try Again Later",
+		})
+	}
+
+	mutation := &api.Mutation{
+		CommitNow: true,
+		SetJson:   updatedJsonBody,
+	}
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing This Request, Please Try Again",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "User Updated Successfully",
 	})
 }
