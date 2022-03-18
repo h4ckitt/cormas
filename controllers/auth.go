@@ -124,7 +124,7 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	if !authData.Result[0].Valid {
+	if len(authData.Result) == 0 || !authData.Result[0].Valid {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "Email Or Password Invalid",
 		})
