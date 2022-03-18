@@ -32,7 +32,7 @@ func SignUpHandler(c *fiber.Ctx) error {
 	//var data map[string]string
 
 	if err := c.BodyParser(user); err != nil {
-		fmt.Println("An Error Occured: ", err)
+		fmt.Println("An Error Occurred: ", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(err)
 	}
 
@@ -86,13 +86,13 @@ func Login(c *fiber.Ctx) error {
 	//fetch user info from db logic here
 
 	if user.UID == 0 {
-		c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Invalid Credentials",
 		})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])); err != nil {
-		c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"message": "Invalid Credentials",
 		})
 	}
