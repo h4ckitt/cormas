@@ -74,11 +74,11 @@ func GetAllCurrencies(c *fiber.Ctx) error {
 	}
 
 	currencyData := struct {
-		Result  []struct{
-			Uid string `json:"uid"`
-			Name string `json:"name"`
-			Value string `json:"value"`
-			Status int	`json:"status"`
+		Result []struct {
+			Uid    string `json:"uid"`
+			Name   string `json:"name"`
+			Value  string `json:"value"`
+			Status int    `json:"status"`
 		} `json:"currency"`
 	}{}
 
@@ -96,7 +96,7 @@ func GetAllCurrencies(c *fiber.Ctx) error {
 func GetOneCurrency(c *fiber.Ctx) error {
 	uidToGet := c.Params("uid")
 	if uidToGet == "" {
-		return 	c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "ID not found",
 		})
 	}
@@ -123,11 +123,11 @@ func GetOneCurrency(c *fiber.Ctx) error {
 	}
 
 	currencyData := struct {
-		Result  []struct{
-			Uid string `json:"uid"`
-			Name string `json:"name"`
-			Value string `json:"value"`
-			Status int	`json:"status"`
+		Result []struct {
+			Uid    string `json:"uid"`
+			Name   string `json:"name"`
+			Value  string `json:"value"`
+			Status int    `json:"status"`
 		} `json:"currency"`
 	}{}
 
@@ -143,9 +143,141 @@ func GetOneCurrency(c *fiber.Ctx) error {
 }
 
 func UpdateCurrency(c *fiber.Ctx) error {
-	return nil
+	uidToGet := c.Params("uid")
+	if uidToGet == "" {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "ID not found",
+		})
+	}
+
+	updatedCurrency := struct {
+		UID       string `json:"uid"`
+		Icon      string `json:"icon,omitempty"`
+		Value     string `json:"value"`
+		Status    int    `json:"status"`
+		UpdatedAt string `json:"updated_at,omitempty"`
+	}{}
+
+	if err := c.BodyParser(&updatedCurrency); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "bad request body received.",
+		})
+	}
+
+	if updatedCurrency.Value == "" && updatedCurrency.Status == 0 && updatedCurrency.Icon == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "bad request body received.",
+		})
+	}
+
+	updatedCurrency.UID = uidToGet
+	updatedCurrency.UpdatedAt = time.Now().Format(time.RFC3339)
+
+	updatedJson, err := json.Marshal(updatedCurrency)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing the request. Please try again",
+		})
+	}
+
+	mutation := &api.Mutation{
+		CommitNow: true,
+		SetJson: updatedJson,
+	}
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An Error Occurred While Processing This Request. Please, Try Again",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "Currency Updated Successfully",
+	})
 }
 
 func DeleteCurrency(c *fiber.Ctx) error {
-	return nil
+	uidToGet := c.Params("uid")
+	if uidToGet == "" {
+		return 	c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "ID not found",
+		})
+	}
+
+	//variable := map[string]string{"$uid": uidToGet}
+	//q := `
+	//	query Currency($uid: string) {
+	//		delete (func: uid($uid)) {
+	//			uid
+	//		}
+	//	}`
+	//
+	//_, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variable)
+	//
+	//if err != nil {
+	//	log.Println(err)
+	//	return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+	//		"message": "An error occurred. Please try again",
+	//	})
+	//}
+
+	variable := map[string]string{"$uid": uidToGet}
+
+	q := `
+		query Currency($uid: string) {
+			currency(func: uid($uid)) {
+				uid
+				name
+				value
+				status
+			  }
+		}`
+
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variable)
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "An error occurred. Please try again",
+		})
+	}
+
+	currencyData := struct {
+		Result []struct {
+			Uid    string `json:"uid"`
+			Name   string `json:"name"`
+			Value  string `json:"value"`
+			Status int    `json:"status"`
+		} `json:"currency"`
+	}{}
+
+	err = json.Unmarshal(resp.Json, &currencyData)
+
+	mutation := &api.Mutation{CommitNow: true}
+	out, err := json.Marshal(currencyData.Result[0])
+
+	if err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred. Please Try Again",
+		})
+	}
+
+	mutation.DeleteJson = out
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"message": "An Error Occurred",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Deleted",
+	})
+
 }
