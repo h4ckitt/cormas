@@ -5,11 +5,10 @@ go 1.17
 require (
 	github.com/dgraph-io/dgo v1.0.0
 	github.com/dgraph-io/dgo/v210 v210.0.0-20220113041351-ba0e5dfc4c3e
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gofiber/fiber v1.14.6
 	github.com/gofiber/fiber/v2 v2.29.0
 	github.com/gofiber/jwt/v3 v3.2.8
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
+	github.com/golang-jwt/jwt/v4 v4.3.0
 	google.golang.org/grpc v1.45.0
 )
 
@@ -17,7 +16,6 @@ require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/gofiber/utils v0.0.10 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.3.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/schema v1.1.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect

@@ -4,25 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/dgo"
-	"github.com/dgraph-io/dgo/protos/api"
+	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"log"
-	"rest-api/db"
 	"rest-api/models"
+	"time"
 )
 
 func CreateCurrency(c *fiber.Ctx) error {
-	dgraph := db.GetDB()
-
-	txn := dgraph.NewTxn()
-
-	defer func(txn *dgo.Txn, ctx context.Context) {
-		err := txn.Discard(ctx)
-		if err != nil {
-			log.Println(err)
-		}
-	}(txn, context.TODO())
 
 	currency := new(models.Currency)
 
@@ -37,6 +26,12 @@ func CreateCurrency(c *fiber.Ctx) error {
 		})
 	}
 
+	mu := &api.Mutation{CommitNow: true}
+
+	currency.Type = "Currency"
+	now := time.Now().Format(time.RFC3339)
+	currency.CreatedAt, currency.CreatedAt = now, now
+
 	currencyBody, err := json.Marshal(currency)
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
@@ -44,15 +39,12 @@ func CreateCurrency(c *fiber.Ctx) error {
 		})
 	}
 
-	mu := &api.Mutation{
-		SetJson: currencyBody,
-	}
+	mu.SetJson = currencyBody
 
-	mu.CommitNow = true
-
-	_, err = txn.Mutate(context.TODO(), mu)
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mu)
 
 	if err != nil {
+		log.Println(err)
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
 			"message": "An Error Occurred",
 		})
@@ -62,7 +54,92 @@ func CreateCurrency(c *fiber.Ctx) error {
 }
 
 func GetAllCurrencies(c *fiber.Ctx) error {
-	return nil
+	q := `
+		query Currency() {
+			currency(func: type(Currency)){
+				uid
+				name
+				value
+				status
+			  }
+		}`
+
+	resp, err := dgraph.NewTxn().Query(context.Background(), q)
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred. Please try again",
+		})
+	}
+
+	currencyData := struct {
+		Result  []struct{
+			Uid string `json:"uid"`
+			Name string `json:"name"`
+			Value string `json:"value"`
+			Status int	`json:"status"`
+		} `json:"currency"`
+	}{}
+
+	err = json.Unmarshal(resp.Json, &currencyData)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred. Please try again",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(currencyData)
+}
+
+func GetOneCurrency(c *fiber.Ctx) error {
+	uidToGet := c.Params("uid")
+	if uidToGet == "" {
+		return 	c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "ID not found",
+		})
+	}
+
+	variable := map[string]string{"$uid": uidToGet}
+
+	q := `
+		query Currency($uid: string) {
+			currency(func: uid($uid)) {
+				uid
+				name
+				value
+				status
+			  }
+		}`
+
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variable)
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "An error occurred. Please try again",
+		})
+	}
+
+	currencyData := struct {
+		Result  []struct{
+			Uid string `json:"uid"`
+			Name string `json:"name"`
+			Value string `json:"value"`
+			Status int	`json:"status"`
+		} `json:"currency"`
+	}{}
+
+	err = json.Unmarshal(resp.Json, &currencyData)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred. Please try again",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(currencyData)
 }
 
 func UpdateCurrency(c *fiber.Ctx) error {
