@@ -15,6 +15,7 @@ type User struct {
 	Assets       *Asset     `json:"assets,omitempty"` //This Should Be Reversed From Either Product Or Post
 	Premium      int        `json:"premium"`
 	Amount       float64    `json:"amount,omitempty"`
+	Suspended    bool       `json:"suspended"`
 	LastIP       string     `json:"last_ip"`
 	Currency     *Currency  `json:"currency"`
 	Bank         *Balance   `json:"balance"`

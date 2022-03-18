@@ -153,7 +153,18 @@ func Login(c *fiber.Ctx) error {
 }
 
 func Update(c *fiber.Ctx) error {
-	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	updatedUser := struct {
 		UID       string `json:"uid"`
