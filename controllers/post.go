@@ -9,6 +9,7 @@ import (
 	"log"
 	"rest-api/models"
 	"rest-api/utils"
+	"time"
 )
 
 func CreatePost(c *fiber.Ctx) error {
@@ -242,7 +243,8 @@ func UpdatePost(c *fiber.Ctx) error {
 		UID         string `json:"uid"`
 		Name        string `json:"name,omitempty"`
 		Description string `json:"description,omitempty"`
-	}{UID: postID}
+		UpdatedAt   string `json:"updated_at"`
+	}{UID: postID, UpdatedAt: time.Now().Format(time.RFC3339)}
 
 	if err := c.BodyParser(&tbu); err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
