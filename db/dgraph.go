@@ -254,6 +254,7 @@ func CreateSchema() {
 			created_at: datetime .
 			updated_at: datetime .
 			status: int .
+			suspended: bool .
 			icon: string .
 			description: string .
 			username: string @index(hash) .

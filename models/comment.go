@@ -1,16 +1,16 @@
 package models
 
-import "time"
-
 type Comment struct {
+	UID string `json:"uid,omitempty"`
 	//Title       string      `json:"title"`
 	Description string      `json:"description"`
 	Moderation  bool        `json:"moderation"`
-	Author      User        `json:"author"`
-	Address     Address     `json:"address,omitempty"`
+	Author      interface{} `json:"author"`
+	Address     *Address    `json:"address,omitempty"`
 	Reply       *[]Comment  `json:"reply,omitempty"`
-	Reaction    *[]Reaction `json:"reaction"`
-	Post        Post        `json:"post"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAT   time.Time   `json:"updated_at"`
+	Reaction    *[]Reaction `json:"reaction,omitempty"`
+	Post        *Post       `json:"post,omitempty"`
+	CreatedAt   string      `json:"created_at"`
+	UpdatedAt   string      `json:"updated_at"`
+	Type        string      `json:"dgraph.type,omitempty"`
 }

@@ -9,6 +9,7 @@ type Address struct {
 	Country    string `json:"country"`
 	Status     int    `json:"status"`
 	Moderation bool   `json:"moderation"`
+	Type       string `json:"dgraph.type,omitempty"`
 	//Relationship To User Table Should Be Reverse  So We Can Find Out Who Lives At This Address
 	//Relationship To Post Should Be Reverse So We Can Find Out Where This Post Was Made
 	//Relationship To Comment Should Be Reverse So We Can Find Out Where This Comment Was Made
