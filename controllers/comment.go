@@ -308,24 +308,14 @@ func DeleteComment(c *fiber.Ctx) error {
 
 func ListComments(c *fiber.Ctx) error {
 
-	commentId := c.Params("id")
+	postID := c.Params("id")
 
 	q :=
 		`
-		query Comment($uid: string){
-			comment(func: uid($uid)){
-				description
-				author {
-					name
-					username
-					email
-					avatar
-					cover
-				}
-				reply {
+		query Post($uid: string) {
+			comments(func: uid($uid)) {
+				comments {
 					description
-					created_at
-					updated_at
 					author {
 						name
 						username
@@ -333,11 +323,27 @@ func ListComments(c *fiber.Ctx) error {
 						avatar
 						cover
 					}
-				}
-				reaction {
-					name
-				}
 					
+				}
+				
+			}
+		}
 		`
-	return nil
+
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": postID})
+
+	if err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
+
+	comments := struct {
+		Result []models.Comment `json:"comments"`
+	}{}
+
+	json.Unmarshal(resp.Json, &comments)
+
+	return c.Status(fiber.StatusOK).JSON(comments)
 }
