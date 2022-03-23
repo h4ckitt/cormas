@@ -52,7 +52,12 @@ func CreatePost(c *fiber.Ctx) error {
 	post.UpdatedAt = now
 	post.Type = "Post"
 
-	postJson, err := json.Marshal(post)
+	tx := struct {
+		UID  string      `json:"uid"`
+		Post models.Post `json:"posts"`
+	}{uid, *post}
+
+	postJson, err := json.Marshal(tx)
 
 	if err != nil {
 		log.Println(err)

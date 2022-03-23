@@ -13,6 +13,4 @@ func setupQuestionRoutes(router fiber.Router) {
 	questionGroup.Get("/:id", controllers.GetQuestion)
 	questionGroup.Delete("/:id", authRequired(), controllers.DeleteQuestion)
 	questionGroup.Patch("/:id", authRequired(), controllers.UpdateQuestion)
-	//questionGroup.Post("/:id/review", authRequired(), controllers.Unimplemented)
-	//questionGroup.Get("/:id/comment", controllers.Unimplemented)
 }

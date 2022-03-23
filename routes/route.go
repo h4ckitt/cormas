@@ -19,8 +19,9 @@ func InitRouter() *fiber.App {
 	setupCommentRoutes(v1)
 	setupProductRoutes(v1)
 	setupQuestionRoutes(v1)
-	setupBalanceRoutes(v1)
 	setupAssetRoutes(v1)
+	setupBankRoutes(v1)
+	setupReactionRoutes(v1)
 
 	return app
 }

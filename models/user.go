@@ -18,7 +18,7 @@ type User struct {
 	Suspended    bool       `json:"suspended"`
 	LastIP       string     `json:"last_ip"`
 	Currency     *Currency  `json:"currency"`
-	Bank         *Balance   `json:"balance"`
+	Bank         *Bank      `json:"bank"`
 	Orders       *[]Order   `json:"orders,omitempty"`
 	Invoices     *[]Invoice `json:"invoices,omitempty"`
 	Posts        *[]Post    `json:"posts,omitempty"`
