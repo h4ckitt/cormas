@@ -30,7 +30,6 @@ type User struct {
 	Sales        *[]Order   `json:"sales,omitempty"`
 	SaleInvoices *[]Invoice `json:"sale_invoices,omitempty"`
 	Privacy      int        `json:"privacy"`
-	Suspended    bool       `json:"suspended"`
 	CreatedAt    string     `json:"created_at,omitempty"`
 	UpdatedAt    string     `json:"updated_at,omitempty"`
 	Type         string     `json:"dgraph.type"`

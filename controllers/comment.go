@@ -13,7 +13,19 @@ import (
 )
 
 func CreateComment(c *fiber.Ctx) error {
-	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	comment := new(models.Comment)
 
@@ -146,7 +158,19 @@ func CreateComment(c *fiber.Ctx) error {
 
 func UpdateComment(c *fiber.Ctx) error {
 
-	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	commentID := c.Params("id")
 
@@ -238,7 +262,19 @@ func UpdateComment(c *fiber.Ctx) error {
 }
 
 func DeleteComment(c *fiber.Ctx) error {
-	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	commentID := c.Params("id")
 
