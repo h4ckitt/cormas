@@ -16,8 +16,6 @@ github.com/cncf/xds/go v0.0.0-20210922020428-25de7278fc84/go.mod h1:eXthEFrGJvWH
 github.com/cncf/xds/go v0.0.0-20211011173535-cb28da3451f1/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dgraph-io/dgo v1.0.0 h1:DRuI66G+j0XWDOXly4v5PSk2dGkbIopAZIirRjq7lzI=
-github.com/dgraph-io/dgo v1.0.0/go.mod h1:6K5zUB6Lsml4SEStX+fPzGhJtCLX9XxbkHJLsGOXS1E=
 github.com/dgraph-io/dgo/v210 v210.0.0-20220113041351-ba0e5dfc4c3e h1:+RV+hvGYPEqTABBflJss35nBDU9GNq4aKVR85dKqSz0=
 github.com/dgraph-io/dgo/v210 v210.0.0-20220113041351-ba0e5dfc4c3e/go.mod h1:dCzdThGGTPYOAuNtrM6BiXj/86voHn7ZzkPL6noXR3s=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
