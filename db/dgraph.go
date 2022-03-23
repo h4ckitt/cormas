@@ -341,7 +341,7 @@ func CreateSchema() {
 				balance
 				addresses: [Address]
 				currency: Currency
-				bank: Balance
+				bank: Bank
 				orders: [Order]
 				invoices: [Invoice]
 				posts: [Post]
@@ -421,7 +421,7 @@ func CreateSchema() {
 				value
 			}
 
-			type Balance {
+			type Bank {
 				amount
 				status
 				moderation
@@ -524,7 +524,7 @@ func CreateSchema() {
 func init() {
 	fmt.Println("init function here")
 	var err error
-	//db, err = dqlx.Connect("localhost:9080")
+
 	conn, err := grpc.Dial("localhost:9080", grpc.WithInsecure())
 
 	if err != nil {
