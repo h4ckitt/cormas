@@ -1,12 +1,3 @@
-# TODO -> Balance
-# - Amount
-# - Currency [ Currency Table ]
-# - Owner [User table]
-# - Status [int 1: active ,2: pending]
-# - Moderation bool
-# - CreatedAt
-# - UpdatedAt
-
 # TODO -> Reaction
 # - PostType (UID)
 # - Reaction Type [Int 1, 2, 3, 4, 5, 6, 7]
@@ -113,20 +104,6 @@
 # - Author [User Table]
 # - Assets [Assets Table]
 # - Moderation [int 1,2,3]
-
-# TODO -> Assets (Image/Video)
-# - Path
-# - Type ( e.g, 1,2.. ( 1=> Image, 2=>Video))
-# - CreatedAt
-# - UpdatedAt
-# - Owner [User table]
-# - Business [ Business table]
-# - Product [ Product table]
-# - Post [ Post table ]
-# - Comment [ Comment table ]
-# - Review [ Review table ]
-# - Qna [ Qna Table]
-# - Moderation bool
 
 # Only businesses can sell products
 # TODO ORDER table

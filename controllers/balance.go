@@ -44,6 +44,7 @@ func CreateBalance(c *fiber.Ctx) error {
 	author := struct {
 		UID string `json:"uid"`
 	}{uid}
+
 	now := time.Now().Format(time.RFC3339)
 
 	balance.User = author
