@@ -3,7 +3,6 @@ module rest-api
 go 1.17
 
 require (
-	github.com/dgraph-io/dgo v1.0.0
 	github.com/dgraph-io/dgo/v210 v210.0.0-20220113041351-ba0e5dfc4c3e
 	github.com/gofiber/fiber v1.14.6
 	github.com/gofiber/fiber/v2 v2.29.0

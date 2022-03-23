@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func CreatePost(c *fiber.Ctx) error {
+func CreateBalance(c *fiber.Ctx) error {
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -26,16 +26,16 @@ func CreatePost(c *fiber.Ctx) error {
 		})
 	}
 
-	post := new(models.Post)
+	balance := new(models.Balance)
 
-	if err := c.BodyParser(&post); err != nil {
+	if err := c.BodyParser(&balance); err != nil {
 		log.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "An Error Occurred While Processing That Request, Please Try Again Later",
 		})
 	}
 
-	if post.Name == "" || post.Description == "" {
+	if balance.Status < 1 || balance.Status > 2 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Invalid Request	 Body Received",
 		})
@@ -44,15 +44,14 @@ func CreatePost(c *fiber.Ctx) error {
 	author := struct {
 		UID string `json:"uid"`
 	}{uid}
-
 	now := time.Now().Format(time.RFC3339)
 
-	post.Author = author
-	post.CreatedAt = now
-	post.UpdatedAt = now
-	post.Type = "Post"
+	balance.User = author
+	balance.CreatedAt = now
+	balance.UpdatedAt = now
+	balance.Type = "Balance"
 
-	postJson, err := json.Marshal(post)
+	balanceJson, err := json.Marshal(balance)
 
 	if err != nil {
 		log.Println(err)
@@ -63,7 +62,7 @@ func CreatePost(c *fiber.Ctx) error {
 
 	mutation := &api.Mutation{
 		CommitNow: true,
-		SetJson:   postJson,
+		SetJson:   balanceJson,
 	}
 
 	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
@@ -80,67 +79,53 @@ func CreatePost(c *fiber.Ctx) error {
 	})
 }
 
-func ReadPost(c *fiber.Ctx) error {
-	postID := c.Params("id")
+func GetBalance(c *fiber.Ctx) error {
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
-	q :=
-		`
-		query Post($uid: string){
-			post(func: uid($uid)){
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
+
+	balanceID := c.Params("id")
+
+	q := `
+		query Balance($uid: string) {
+			balance(func: uid($balanceUid)){
 				name
-				description
-				reactions {
+				amount
+				currency {
 					name
+					value
+					icon
+					status
 				}
-				assets {
-					image
-					video
-					document
-				}
-				author {
+				user(func: uid($uid)) {
+					uid
 					name
-					username
 					email
-					avatar
-					cover
+					username
 				}
-				privacy
-				address {
-					name
-					address1
-				}
-				comments {
-					description
-					created_at
-					updated_at
-					author {
-						name
-						username
-						email
-						avatar
-						cover
-					}
-					reply {
-						description
-						created_at
-						updated_at
-						author {
-							name
-							username
-							email
-							avatar
-							cover
-						}
-					}
-				}
-				tags {
-					name
-				}
+				status
+				moderation
+				created_at
+				updated_at
 			}
 		}
-		`
+	`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": postID})
+	variables := map[string]string{
+		"$uid": uid,
+		"$balanceUid": balanceID,
+	}
+
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variables)
 
 	if err != nil {
 		log.Println(err)
@@ -149,39 +134,39 @@ func ReadPost(c *fiber.Ctx) error {
 		})
 	}
 
-	post := struct {
-		Result []models.Post `json:"post"`
+	balance := struct {
+		Result []models.Balance `json:"balance"`
 	}{}
 
-	_ = json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &balance)
 
-	if len(post.Result) == 0 {
+	if len(balance.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Requested resource was not found on this server",
 		})
 	}
 
-	return c.JSON(post)
+	return c.JSON(balance)
 }
 
-func DeletePost(c *fiber.Ctx) error {
+func DeleteBalance(c *fiber.Ctx) error {
 	uid, _ := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
-	postID := c.Params("id")
+	balanceId := c.Params("id")
 
 	q :=
 		`
-		query Post($uid: string) {
-			post(func: uid($uid)) @normalize{
+		query Balance($uid: string) {
+			balance(func: uid($uid)) @normalize{
 				name: name
-				author {
-					author_uid: uid
+				User {
+					user_uid: uid
 				}
 			}
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": postID})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": balanceId})
 
 	if err != nil {
 		log.Println(err)
@@ -190,22 +175,22 @@ func DeletePost(c *fiber.Ctx) error {
 		})
 	}
 
-	post := struct {
+	balance := struct {
 		Result []struct {
 			Name      string `json:"name"`
-			AuthorUID string `json:"author_uid"`
-		} `json:"post"`
+			UserUid string `json:"user_uid"`
+		} `json:"balance"`
 	}{}
 
-	_ = json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &balance)
 
-	if len(post.Result) == 0 {
+	if len(balance.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "The resource doesn't exist on this server",
 		})
 	}
 
-	if post.Result[0].AuthorUID != uid {
+	if balance.Result[0].UserUid != uid {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"message": "Forbidden",
 		})
@@ -213,7 +198,7 @@ func DeletePost(c *fiber.Ctx) error {
 
 	tbd := struct {
 		UID string `json:"uid"`
-	}{postID}
+	}{balanceId}
 
 	tbdJson, err := json.Marshal(tbd)
 
@@ -242,12 +227,12 @@ func DeletePost(c *fiber.Ctx) error {
 	})
 }
 
-func UpdatePost(c *fiber.Ctx) error {
+func UpdateBalance(c *fiber.Ctx) error {
 	uid, _ := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
-	postID := c.Params("id")
+	balanceId := c.Params("id")
 
-	if postID == "" {
+	if balanceId == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad Request received",
 		})
@@ -258,7 +243,7 @@ func UpdatePost(c *fiber.Ctx) error {
 		Name        string `json:"name,omitempty"`
 		Description string `json:"description,omitempty"`
 		UpdatedAt   string `json:"updated_at"`
-	}{UID: postID, UpdatedAt: time.Now().Format(time.RFC3339)}
+	}{UID: balanceId, UpdatedAt: time.Now().Format(time.RFC3339)}
 
 	if err := c.BodyParser(&tbu); err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
@@ -274,17 +259,17 @@ func UpdatePost(c *fiber.Ctx) error {
 
 	q :=
 		`
-		query Post($uid: string) {
-			post(func: uid($uid)) @normalize{
+		query Balance($uid: string) {
+			balance(func: uid($uid)) @normalize{
 				name: name
-				author {
-					author_uid: uid
+				user {
+					user_uid: uid
 				}
 			}
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": postID})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": balanceId})
 
 	if err != nil {
 		log.Println(err)
@@ -293,22 +278,22 @@ func UpdatePost(c *fiber.Ctx) error {
 		})
 	}
 
-	post := struct {
+	balance := struct {
 		Result []struct {
 			Name      string `json:"name"`
-			AuthorUID string `json:"author_uid"`
-		} `json:"post"`
+			UserUID string `json:"user_uid"`
+		} `json:"balance"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &balance)
 
-	if len(post.Result) == 0 {
+	if len(balance.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "The resource doesn't exist on this server",
 		})
 	}
 
-	if post.Result[0].AuthorUID != uid {
+	if balance.Result[0].UserUID != uid {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"message": "Forbidden",
 		})
