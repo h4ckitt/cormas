@@ -157,13 +157,31 @@ func ReadPost(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(post)
+	return c.JSON(post.Result[0])
 }
 
 func DeletePost(c *fiber.Ctx) error {
-	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	postID := c.Params("id")
+
+	if postID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid id received",
+		})
+	}
 
 	q :=
 		`
@@ -240,7 +258,19 @@ func DeletePost(c *fiber.Ctx) error {
 
 func UpdatePost(c *fiber.Ctx) error {
 
-	uid := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+
+	if err != nil {
+		if err.Error() == "invalid JWT Token" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"message": "Forbidden",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	postID := c.Params("id")
 
@@ -319,13 +349,7 @@ func UpdatePost(c *fiber.Ctx) error {
 			"message": "An error occurred while processing that request",
 		})
 	}
-
-	mutation := &api.Mutation{
-		CommitNow: true,
-		SetJson:   tbuJson,
-	}
-
-	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+	_, err = dgraph.NewTxn().Mutate(context.Background(), &api.Mutation{CommitNow: true, SetJson: tbuJson})
 
 	if err != nil {
 		log.Println(err)
