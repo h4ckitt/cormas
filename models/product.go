@@ -8,7 +8,7 @@ type Product struct {
 	Category     *Category `json:"category"`
 	//This Should Be A Reverse Relationship To Order Table
 	Reviews               *[]Review `json:"review"`
-	Type                  int       `json:"type"`
+	ProductType           int       `json:"type"`
 	Supported             int       `json:"supported"`
 	Downloadable          *[]Asset  `json:"downloadable,omitempty"`
 	Thumbnail             *Asset    `json:"thumbnail,omitempty"`
@@ -23,4 +23,5 @@ type Product struct {
 	Moderation            bool      `json:"moderation"`
 	Address               *Address  `json:"address"`
 	Owner                 *User     `json:"owner"`
+	Type                  string    `json:"dgraph.type,omitempty"`
 }
