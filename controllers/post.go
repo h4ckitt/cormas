@@ -45,7 +45,11 @@ func CreatePost(c *fiber.Ctx) error {
 		UID string `json:"uid"`
 	}{uid}
 
+	now := time.Now().Format(time.RFC3339)
+
 	post.Author = author
+	post.CreatedAt = now
+	post.UpdatedAt = now
 	post.Type = "Post"
 
 	postJson, err := json.Marshal(post)
@@ -149,7 +153,7 @@ func ReadPost(c *fiber.Ctx) error {
 		Result []models.Post `json:"post"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &post)
 
 	if len(post.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -157,31 +161,13 @@ func ReadPost(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(post.Result[0])
+	return c.JSON(post)
 }
 
 func DeletePost(c *fiber.Ctx) error {
-	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
-
-	if err != nil {
-		if err.Error() == "invalid JWT Token" {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"message": "Forbidden",
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "An error occurred while processing that request",
-		})
-	}
+	uid, _ := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	postID := c.Params("id")
-
-	if postID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid id received",
-		})
-	}
 
 	q :=
 		`
@@ -211,7 +197,7 @@ func DeletePost(c *fiber.Ctx) error {
 		} `json:"post"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &post)
 
 	if len(post.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -257,20 +243,7 @@ func DeletePost(c *fiber.Ctx) error {
 }
 
 func UpdatePost(c *fiber.Ctx) error {
-
-	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
-
-	if err != nil {
-		if err.Error() == "invalid JWT Token" {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"message": "Forbidden",
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "An error occurred while processing that request",
-		})
-	}
+	uid, _ := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	postID := c.Params("id")
 
@@ -349,7 +322,13 @@ func UpdatePost(c *fiber.Ctx) error {
 			"message": "An error occurred while processing that request",
 		})
 	}
-	_, err = dgraph.NewTxn().Mutate(context.Background(), &api.Mutation{CommitNow: true, SetJson: tbuJson})
+
+	mutation := &api.Mutation{
+		CommitNow: true,
+		SetJson:   tbuJson,
+	}
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
 
 	if err != nil {
 		log.Println(err)

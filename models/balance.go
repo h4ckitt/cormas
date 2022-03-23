@@ -1,15 +1,13 @@
 package models
 
-import "time"
-
 type Balance struct {
-	Amount   float64  `json:"amount"`
-	Currency Currency `json:"currency"`
-	//This Relationship Should Be A Reversible One To User
+	Name       string      `json:"name"`
+	Amount     float64     `json:"amount"`
+	Currency   Currency    `json:"currency"`
 	User       interface{} `json:"user"`
 	Status     int         `json:"status"`
 	Moderation bool        `json:"moderation"`
-	CreatedAt  time.Time   `json:"created_at"`
-	UpdatedAt  time.Time   `json:"updated_at"`
+	CreatedAt  string   `json:"created_at"`
+	UpdatedAt  string   `json:"updated_at"`
 	Type       string      `json:"dgraph.type,omitempty"`
 }

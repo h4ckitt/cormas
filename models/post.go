@@ -15,5 +15,7 @@ type Post struct {
 	Reactions   *[]Reaction `json:"reactions,omitempty"`
 	Assets      *[]Asset    `json:"assets,omitempty"`
 	Tags        *[]HashTag  `json:"tags,omitempty"`
+	CreatedAt   string      `json:"created_at"`
+	UpdatedAt   string      `json:"updated_at"`
 	Type        string      `json:"dgraph.type,omitempty"`
 }
