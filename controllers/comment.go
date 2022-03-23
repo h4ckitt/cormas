@@ -42,7 +42,7 @@ func CreateComment(c *fiber.Ctx) error {
 		})
 	}
 
-	postID := comment.EntityUID
+	entityID := comment.EntityUID
 
 	q :=
 		`
@@ -56,7 +56,7 @@ func CreateComment(c *fiber.Ctx) error {
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": postID})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": entityID})
 
 	if err != nil {
 		log.Println(err)
@@ -95,7 +95,12 @@ func CreateComment(c *fiber.Ctx) error {
 	comment.EntityUID = "" //Set This To Empty Because It's Not Needed In The Database
 	comment.Type = "Comment"
 
-	commentJson, err := json.Marshal(comment)
+	tx := struct {
+		UID     string         `json:"uid"`
+		Comment models.Comment `json:"comments"`
+	}{entityID, *comment}
+
+	commentJson, err := json.Marshal(tx)
 
 	if err != nil {
 		log.Println(err)
@@ -110,7 +115,7 @@ func CreateComment(c *fiber.Ctx) error {
 		SetJson:   commentJson,
 	}
 
-	resp, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
 
 	if err != nil {
 		log.Println(err)
@@ -118,31 +123,6 @@ func CreateComment(c *fiber.Ctx) error {
 			"message": "An error occurred while processing that request",
 		})
 	}
-
-	postBody := struct {
-		UID     string `json:"uid"`
-		Comment []struct {
-			UID string `json:"uid"`
-		} `json:"comments"`
-	}{UID: postID}
-
-	x := struct {
-		UID string `json:"uid"`
-	}{resp.Uids["new"]}
-
-	postBody.Comment = append(postBody.Comment, x)
-
-	postBodyJson, err := json.Marshal(postBody)
-
-	if err != nil {
-		log.Println(err)
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "An error occurred while processing that request",
-		})
-	}
-
-	_, err = dgraph.NewTxn().Mutate(context.Background(), &api.Mutation{CommitNow: true, SetJson: postBodyJson})
 
 	if err != nil {
 		log.Println(err)

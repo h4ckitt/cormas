@@ -51,7 +51,12 @@ func CreateProduct(c *fiber.Ctx) error {
 		UID string `json:"uid"`
 	}{uid}
 
-	productJson, err := json.Marshal(product)
+	tx := struct {
+		UID     string         `json:"uid"`
+		Product models.Product `json:"products"`
+	}{uid, *product}
+
+	productJson, err := json.Marshal(tx)
 
 	fmt.Println(string(productJson))
 

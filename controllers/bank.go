@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-func CreateBalance(c *fiber.Ctx) error {
+func CreateBank(c *fiber.Ctx) error {
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -26,7 +27,7 @@ func CreateBalance(c *fiber.Ctx) error {
 		})
 	}
 
-	balance := new(models.Balance)
+	balance := new(models.Bank)
 
 	if err := c.BodyParser(&balance); err != nil {
 		log.Println(err)
@@ -35,51 +36,52 @@ func CreateBalance(c *fiber.Ctx) error {
 		})
 	}
 
-	if balance.Status < 1 || balance.Status > 2 {
+	if balance.Name == "" || balance.Amount <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid Request	 Body Received",
+			"message": "Invalid Request Body Received",
 		})
 	}
 
-	author := struct {
+	/*author := struct {
 		UID string `json:"uid"`
-	}{uid}
+	}{uid}*/
 	now := time.Now().Format(time.RFC3339)
 
-	balance.User = author
 	balance.CreatedAt = now
 	balance.UpdatedAt = now
-	balance.Type = "Balance"
+	balance.Type = "Bank"
 
-	balanceJson, err := json.Marshal(balance)
+	userBank := struct {
+		UID  string      `json:"uid"`
+		Bank models.Bank `json:"bank"`
+	}{uid, *balance}
+
+	userJson, err := json.Marshal(userBank)
 
 	if err != nil {
 		log.Println(err)
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"message": "An Error Occurred While Processing That Request,, Please Try Again Later",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
 		})
 	}
 
-	mutation := &api.Mutation{
-		CommitNow: true,
-		SetJson:   balanceJson,
-	}
+	fmt.Println(string(userJson))
 
-	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+	_, err = dgraph.NewTxn().Mutate(context.Background(), &api.Mutation{CommitNow: true, SetJson: userJson})
 
 	if err != nil {
 		log.Println(err)
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"message": "An Error Occurred While Processing That Request,, Please Try Again Later",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
 		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"message": "Post Created Successfully",
+		"message": "Bank Created Successfully",
 	})
 }
 
-func GetBalance(c *fiber.Ctx) error {
+func GetBank(c *fiber.Ctx) error {
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -96,8 +98,8 @@ func GetBalance(c *fiber.Ctx) error {
 	balanceID := c.Params("id")
 
 	q := `
-		query Balance($uid: string) {
-			balance(func: uid($balanceUid)){
+		query Bank($uid: string) {
+			bank(func: uid($uid)){
 				name
 				amount
 				currency {
@@ -106,7 +108,7 @@ func GetBalance(c *fiber.Ctx) error {
 					icon
 					status
 				}
-				user(func: uid($uid)) {
+				user {
 					uid
 					name
 					email
@@ -121,8 +123,7 @@ func GetBalance(c *fiber.Ctx) error {
 	`
 
 	variables := map[string]string{
-		"$uid": uid,
-		"$balanceUid": balanceID,
+		"$uid": balanceID,
 	}
 
 	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, variables)
@@ -135,7 +136,7 @@ func GetBalance(c *fiber.Ctx) error {
 	}
 
 	balance := struct {
-		Result []models.Balance `json:"balance"`
+		Result []models.Bank `json:"bank"`
 	}{}
 
 	_ = json.Unmarshal(resp.Json, &balance)
@@ -146,17 +147,23 @@ func GetBalance(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(balance)
+	if balance.Result[0].UID != uid {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"message": "Forbidden",
+		})
+	}
+
+	return c.JSON(balance.Result[0])
 }
 
-func DeleteBalance(c *fiber.Ctx) error {
+func DeleteBank(c *fiber.Ctx) error {
 	uid, _ := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	balanceId := c.Params("id")
 
 	q :=
 		`
-		query Balance($uid: string) {
+		query Bank($uid: string) {
 			balance(func: uid($uid)) @normalize{
 				name: name
 				User {
@@ -177,7 +184,7 @@ func DeleteBalance(c *fiber.Ctx) error {
 
 	balance := struct {
 		Result []struct {
-			Name      string `json:"name"`
+			Name    string `json:"name"`
 			UserUid string `json:"user_uid"`
 		} `json:"balance"`
 	}{}
@@ -227,7 +234,7 @@ func DeleteBalance(c *fiber.Ctx) error {
 	})
 }
 
-func UpdateBalance(c *fiber.Ctx) error {
+func UpdateBank(c *fiber.Ctx) error {
 	uid, _ := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	balanceId := c.Params("id")
@@ -239,10 +246,10 @@ func UpdateBalance(c *fiber.Ctx) error {
 	}
 
 	tbu := struct {
-		UID         string `json:"uid"`
-		Name        string `json:"name,omitempty"`
-		Description string `json:"description,omitempty"`
-		UpdatedAt   string `json:"updated_at"`
+		UID       string  `json:"uid"`
+		Name      string  `json:"name,omitempty"`
+		Amount    float64 `json:"amount,omitempty"`
+		UpdatedAt string  `json:"updated_at"`
 	}{UID: balanceId, UpdatedAt: time.Now().Format(time.RFC3339)}
 
 	if err := c.BodyParser(&tbu); err != nil {
@@ -251,7 +258,7 @@ func UpdateBalance(c *fiber.Ctx) error {
 		})
 	}
 
-	if tbu.Description == "" && tbu.Name == "" {
+	if tbu.Amount <= 0 && tbu.Name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body received",
 		})
@@ -259,7 +266,7 @@ func UpdateBalance(c *fiber.Ctx) error {
 
 	q :=
 		`
-		query Balance($uid: string) {
+		query Bank($uid: string) {
 			balance(func: uid($uid)) @normalize{
 				name: name
 				user {
@@ -280,7 +287,7 @@ func UpdateBalance(c *fiber.Ctx) error {
 
 	balance := struct {
 		Result []struct {
-			Name      string `json:"name"`
+			Name    string `json:"name"`
 			UserUID string `json:"user_uid"`
 		} `json:"balance"`
 	}{}
@@ -323,6 +330,6 @@ func UpdateBalance(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Post updated successfully",
+		"message": "Bank updated successfully",
 	})
 }
