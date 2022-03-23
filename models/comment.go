@@ -12,5 +12,6 @@ type Comment struct {
 	Post        *Post       `json:"post,omitempty"`
 	CreatedAt   string      `json:"created_at"`
 	UpdatedAt   string      `json:"updated_at"`
+	EntityUID   string      `json:"entity_uid,omitempty"` //Should Be Either Of Pro
 	Type        string      `json:"dgraph.type,omitempty"`
 }

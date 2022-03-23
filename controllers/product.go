@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -12,7 +13,7 @@ import (
 )
 
 func CreateProduct(c *fiber.Ctx) error {
-	_, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
+	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
 		if err.Error() == "invalid JWT Token" {
@@ -42,10 +43,17 @@ func CreateProduct(c *fiber.Ctx) error {
 	}
 
 	//Insert business as owner of product once we figure out how to get author's current location
+	//We'll use logged in user for now
 
 	product.Type = "Product"
 
+	product.Owner = struct {
+		UID string `json:"uid"`
+	}{uid}
+
 	productJson, err := json.Marshal(product)
+
+	fmt.Println(string(productJson))
 
 	if err != nil {
 		log.Println(err)
@@ -63,13 +71,13 @@ func CreateProduct(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(productJson)
+	return c.Status(fiber.StatusCreated).JSON(product)
 }
 
 func UpdateProduct(c *fiber.Ctx) error {
-	id := c.Params("id")
+	productID := c.Params("id")
 
-	if id == "" {
+	if productID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body received",
 		})
@@ -87,7 +95,7 @@ func UpdateProduct(c *fiber.Ctx) error {
 		TechnicalInformation  string  `json:"technical_information,omitempty"`
 		AdditionalInformation string  `json:"additional_information,omitempty"`
 		ProductGuides         string  `json:"product_guides,omitempty"`
-	}{}
+	}{UID: productID}
 
 	if err := c.BodyParser(&tbu); err != nil {
 		log.Println(err)
@@ -96,7 +104,8 @@ func UpdateProduct(c *fiber.Ctx) error {
 		})
 	}
 
-	if tbu.Name == "" && tbu.Description == "" && tbu.RegularPrice <= 0 && tbu.SellingPrice <= 0 && tbu.ProductType == 0 &&
+	fmt.Println(tbu.Description)
+	if tbu.Description == "" && tbu.Name == "" && tbu.RegularPrice <= 0 && tbu.SellingPrice <= 0 && tbu.ProductType == 0 &&
 		tbu.Supported == 0 && tbu.Excerpt == "" && tbu.TechnicalInformation == "" && tbu.AdditionalInformation == "" &&
 		tbu.ProductGuides == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -129,7 +138,7 @@ func UpdateProduct(c *fiber.Ctx) error {
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": id})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": productID})
 
 	if err != nil {
 		log.Println(err)
@@ -140,7 +149,7 @@ func UpdateProduct(c *fiber.Ctx) error {
 
 	authData := struct {
 		Result []struct {
-			OwnerUid string `json:"uid"`
+			OwnerUid string `json:"owner_uid"`
 		} `json:"product"`
 	}{}
 
@@ -176,7 +185,7 @@ func UpdateProduct(c *fiber.Ctx) error {
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Post updated successfully",
+		"message": "Product updated successfully",
 	})
 }
 
@@ -219,7 +228,7 @@ func DeleteProduct(c *fiber.Ctx) error {
 
 	authData := struct {
 		Result []struct {
-			OwnerUid string `json:"uid"`
+			OwnerUid string `json:"owner_uid"`
 		} `json:"product"`
 	}{}
 
@@ -266,64 +275,65 @@ func DeleteProduct(c *fiber.Ctx) error {
 func ListProducts(c *fiber.Ctx) error {
 	q :=
 		`
-		products(func: type(Product)) {
-			uid
-			name
-			description
-			regular_price
-			selling_price
-			currency {
-				name
-				icon
-				value
-			}
-			category {
-				name
-				icon
-			}
-			reviews {
+		{
+			products(func: type(Product)) {
+				uid
 				name
 				description
-				author {
+				regular_price
+				selling_price
+				currency {
 					name
+					icon
+					value
+				}
+				category {
+					name
+					icon
+				}
+				reviews {
+					name
+					description
+					author {
+						name
+						username
+						cover
+						avatar
+						email
+					}
+					rating
+				}
+				type
+				supported
+				downloadable {
+					name
+					image
+					video
+					document
+					zip
+				}
+				thumbnail {
+					image
+				}
+				gallery {
+					name
+					image
+					video
+					document
+					zip
+				}
+				excerpt
+				technical_information
+				additional_information
+				product_information
+				product_guides
+				owner {
+					name
+					email
 					username
 					cover
 					avatar
-					email
 				}
-				rating
-			}
-			type
-			supported
-			downloadable {
-				name
-				image
-				video
-				document
-				zip
-			}
-			thumbnail {
-				image
-			}
-			gallery {
-				name
-				image
-				video
-				document
-				zip
-			}
-			excerpt
-			description
-			technical_information
-			additional_information
-			product_information
-			product_guides
-			owner {
-				name
-				email
-				username
-				cover
-				avatar
 			}
 		}
 		`
@@ -399,7 +409,6 @@ func GetProduct(c *fiber.Ctx) error {
 					zip
 				}
 				excerpt
-				description
 				technical_information
 				additional_information
 				product_information
