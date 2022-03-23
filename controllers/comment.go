@@ -29,7 +29,20 @@ func CreateComment(c *fiber.Ctx) error {
 
 	comment := new(models.Comment)
 
-	postID := c.Params("id")
+	if err := c.BodyParser(comment); err != nil {
+		log.Println(err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad request body was received",
+		})
+	}
+
+	if comment.Description == "" || comment.EntityUID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad request body was received",
+		})
+	}
+
+	postID := comment.EntityUID
 
 	q :=
 		`
@@ -73,25 +86,13 @@ func CreateComment(c *fiber.Ctx) error {
 		})
 	}
 
-	if err := c.BodyParser(comment); err != nil {
-		log.Println(err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Bad request body was received",
-		})
-	}
-
-	if comment.Description == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Bad request body was received",
-		})
-	}
-
 	comment.UID = "_:new"
 	comment.Author = struct {
 		UID string `json:"uid"`
 	}{uid}
 	now := time.Now().Format(time.RFC3339)
 	comment.CreatedAt, comment.UpdatedAt = now, now
+	comment.EntityUID = "" //Set This To Empty Because It's Not Needed In The Database
 	comment.Type = "Comment"
 
 	commentJson, err := json.Marshal(comment)
