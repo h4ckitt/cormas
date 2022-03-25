@@ -48,33 +48,35 @@ func CreateQuestion(c *fiber.Ctx) error {
 	question.Author = author
 	question.Type = "Question"
 
-	for index, tag := range *question.Tags {
-		var (
-			uid string
-			err error
-		)
-		if uid, err = utils.GetTagUID(tag); err != nil {
-			log.Println(err)
-			if err.Error() == "tag doesn't exist yet" {
-				newTag := models.HashTag{Type: "HashTag"}
-				bytes, _ := json.Marshal(tag)
-				_ = json.Unmarshal(bytes, &newTag)
-				(*question.Tags)[index] = newTag
-				continue
-			}
+	if question.Tags != nil {
+		for index, tag := range *question.Tags {
+			var (
+				uid string
+				err error
+			)
+			if uid, err = utils.GetTagUID(tag); err != nil {
+				log.Println(err)
+				if err.Error() == "tag doesn't exist yet" {
+					newTag := models.HashTag{Type: "HashTag"}
+					bytes, _ := json.Marshal(tag)
+					_ = json.Unmarshal(bytes, &newTag)
+					(*question.Tags)[index] = newTag
+					continue
+				}
 
-			if err.Error() == "invalid tag" {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"message": "Bad request body received",
+				if err.Error() == "invalid tag" {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"message": "Bad request body received",
+					})
+				}
+
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "An error occurred while processing that request",
 				})
 			}
 
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": "An error occurred while processing that request",
-			})
+			(*question.Tags)[index] = &models.HashTag{UID: uid}
 		}
-
-		(*question.Tags)[index] = &models.HashTag{UID: uid}
 	}
 
 	questionJson, err := json.Marshal(question)
@@ -299,19 +301,10 @@ func DeleteQuestion(c *fiber.Ctx) error {
 func ListQuestions(c *fiber.Ctx) error {
 	q :=
 		`
-		questions(func: type(Question)) {
-			uid
-			name
-			description
-			author {
-				name
-				username
-				email
-				avatar
-				cover
-			}
-			comments {
+		{
+			questions(func: type(Question)) {
 				uid
+				name
 				description
 				author {
 					name
@@ -320,16 +313,27 @@ func ListQuestions(c *fiber.Ctx) error {
 					avatar
 					cover
 				}
-				reaction {
+				comments {
+					uid
+					description
+					author {
+						name
+						username
+						email
+						avatar
+						cover
+					}
+					reaction {
+						name
+					}
+					updated_at
+				}
+				reactions {
 					name
 				}
-				updated_at
-			}
-			reactions {
-				name
-			}
-			tags {
-				name
+				tags {
+					name
+				}
 			}
 		}
 		`
