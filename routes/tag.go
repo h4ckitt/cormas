@@ -6,8 +6,8 @@ import (
 )
 
 func setupTagRoutes(router fiber.Router) {
-	tagGroup := router.Group("/tag")
+	tagGroup := router.Group("/hashtag")
 
-	tagGroup.Get("/:id", controllers.ListTags)
+	tagGroup.Get("/", controllers.ListTags)
 	//tagGroup.Delete("/:id", authRequired(), controllers.DeleteBank) //Only An Admin Should Be Able To Do This?
 }

@@ -42,7 +42,7 @@ func CreateGroup(c *fiber.Ctx) error {
 		})
 	}
 
-	if group.Status < 1 || group.Status > 3 {
+	/*if group.Status < 1 || group.Status > 3 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body was received",
 		})
@@ -52,7 +52,7 @@ func CreateGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body was received",
 		})
-	}
+	}*/
 
 	author := struct {
 		UID string `json:"uid"`

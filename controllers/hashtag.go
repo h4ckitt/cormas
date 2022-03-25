@@ -11,8 +11,10 @@ import (
 func ListTags(c *fiber.Ctx) error {
 	q :=
 		`
-		tags(func: type(HashTag)) {
-			name
+		{
+			tags(func: type(HashTag)) {
+				name
+			}
 		}
 		`
 
