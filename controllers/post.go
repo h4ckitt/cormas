@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -51,6 +52,36 @@ func CreatePost(c *fiber.Ctx) error {
 	post.CreatedAt = now
 	post.UpdatedAt = now
 	post.Type = "Post"
+
+	for index, tag := range *post.Tags {
+		fmt.Println(tag)
+		var (
+			uid string
+			err error
+		)
+		if uid, err = utils.GetTagUID(tag); err != nil {
+			log.Println(err)
+			if err.Error() == "tag doesn't exist yet" {
+				newTag := models.HashTag{Type: "HashTag"}
+				bytes, _ := json.Marshal(tag)
+				_ = json.Unmarshal(bytes, &newTag)
+				(*post.Tags)[index] = newTag
+				continue
+			}
+
+			if err.Error() == "invalid tag" {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"message": "Bad request body received",
+				})
+			}
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "An error occurred while processing that request",
+			})
+		}
+
+		(*post.Tags)[index] = &models.HashTag{UID: uid}
+	}
 
 	tx := struct {
 		UID  string      `json:"uid"`

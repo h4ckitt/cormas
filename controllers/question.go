@@ -48,6 +48,35 @@ func CreateQuestion(c *fiber.Ctx) error {
 	question.Author = author
 	question.Type = "Question"
 
+	for index, tag := range *question.Tags {
+		var (
+			uid string
+			err error
+		)
+		if uid, err = utils.GetTagUID(tag); err != nil {
+			log.Println(err)
+			if err.Error() == "tag doesn't exist yet" {
+				newTag := models.HashTag{Type: "HashTag"}
+				bytes, _ := json.Marshal(tag)
+				_ = json.Unmarshal(bytes, &newTag)
+				(*question.Tags)[index] = newTag
+				continue
+			}
+
+			if err.Error() == "invalid tag" {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"message": "Bad request body received",
+				})
+			}
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "An error occurred while processing that request",
+			})
+		}
+
+		(*question.Tags)[index] = &models.HashTag{UID: uid}
+	}
+
 	questionJson, err := json.Marshal(question)
 
 	if err != nil {
