@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -45,8 +46,42 @@ func CreatePost(c *fiber.Ctx) error {
 		UID string `json:"uid"`
 	}{uid}
 
+	now := time.Now().Format(time.RFC3339)
+
 	post.Author = author
+	post.CreatedAt = now
+	post.UpdatedAt = now
 	post.Type = "Post"
+
+	for index, tag := range *post.Tags {
+		fmt.Println(tag)
+		var (
+			uid string
+			err error
+		)
+		if uid, err = utils.GetTagUID(tag); err != nil {
+			log.Println(err)
+			if err.Error() == "tag doesn't exist yet" {
+				newTag := models.HashTag{Type: "HashTag"}
+				bytes, _ := json.Marshal(tag)
+				_ = json.Unmarshal(bytes, &newTag)
+				(*post.Tags)[index] = newTag
+				continue
+			}
+
+			if err.Error() == "invalid tag" {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"message": "Bad request body received",
+				})
+			}
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "An error occurred while processing that request",
+			})
+		}
+
+		(*post.Tags)[index] = &models.HashTag{UID: uid}
+	}
 
 	tx := struct {
 		UID  string      `json:"uid"`
@@ -154,7 +189,7 @@ func ReadPost(c *fiber.Ctx) error {
 		Result []models.Post `json:"post"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &post)
 
 	if len(post.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -162,7 +197,7 @@ func ReadPost(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(post.Result[0])
+	return c.JSON(post)
 }
 
 func DeletePost(c *fiber.Ctx) error {
@@ -181,12 +216,6 @@ func DeletePost(c *fiber.Ctx) error {
 	}
 
 	postID := c.Params("id")
-
-	if postID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid id received",
-		})
-	}
 
 	q :=
 		`
@@ -216,7 +245,7 @@ func DeletePost(c *fiber.Ctx) error {
 		} `json:"post"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	_ = json.Unmarshal(resp.Json, &post)
 
 	if len(post.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -262,7 +291,6 @@ func DeletePost(c *fiber.Ctx) error {
 }
 
 func UpdatePost(c *fiber.Ctx) error {
-
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -332,7 +360,13 @@ func UpdatePost(c *fiber.Ctx) error {
 		} `json:"post"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	err = json.Unmarshal(resp.Json, &post)
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	if len(post.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -354,7 +388,13 @@ func UpdatePost(c *fiber.Ctx) error {
 			"message": "An error occurred while processing that request",
 		})
 	}
-	_, err = dgraph.NewTxn().Mutate(context.Background(), &api.Mutation{CommitNow: true, SetJson: tbuJson})
+
+	mutation := &api.Mutation{
+		CommitNow: true,
+		SetJson:   tbuJson,
+	}
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
 
 	if err != nil {
 		log.Println(err)

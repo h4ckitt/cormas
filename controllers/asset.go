@@ -12,8 +12,7 @@ import (
 	"time"
 )
 
-// CreateReaction Discuss reaction model
-func CreateReaction(c *fiber.Ctx) error {
+func CreateAsset(c *fiber.Ctx) error {
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -22,28 +21,30 @@ func CreateReaction(c *fiber.Ctx) error {
 				"message": "Forbidden",
 			})
 		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "An error occurred while processing that request",
-		})
 	}
 
-	reaction := new(models.Reaction)
+	asset := new(models.Asset)
 
-	if err := c.BodyParser(reaction); err != nil {
+	if err := c.BodyParser(asset); err != nil {
 		log.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body was received",
 		})
 	}
 
-	if reaction.Name == "" {
+	if asset.Name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body was received",
 		})
 	}
 
-	entityID := reaction.EntityUID
+	if asset.Document == "" && asset.Image == "" && asset.Video == "" && asset.Zip == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad request body was received",
+		})
+	}
+
+	postID := asset.EntityUID
 
 	q :=
 		`
@@ -57,7 +58,7 @@ func CreateReaction(c *fiber.Ctx) error {
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": entityID})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": postID})
 
 	if err != nil {
 		log.Println(err)
@@ -74,6 +75,7 @@ func CreateReaction(c *fiber.Ctx) error {
 	}{}
 
 	err = json.Unmarshal(resp.Json, &post)
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "An error occurred while processing that request",
@@ -92,21 +94,14 @@ func CreateReaction(c *fiber.Ctx) error {
 		})
 	}
 
-	reaction.UID = "_:new"
-	reaction.Owner = struct {
-		UID string `json:"uid"`
-	}{uid}
+	asset.UID = "_:new"
+
 	now := time.Now().Format(time.RFC3339)
-	reaction.CreatedAt, reaction.UpdatedAt = now, now
-	reaction.EntityUID = "" //Set This To Empty Because It's Not Needed In The Database
-	reaction.Type = "Comment"
+	asset.CreatedAt, asset.UpdatedAt = now, now
+	asset.EntityUID = "" //Set This To Empty Because It's Not Needed In The Database
+	asset.Type = "Asset"
 
-	tx := struct {
-		UID      string          `json:"uid"`
-		Reaction models.Reaction `json:"comments"`
-	}{entityID, *reaction}
-
-	reactionJson, err := json.Marshal(tx)
+	commentJson, err := json.Marshal(asset)
 
 	if err != nil {
 		log.Println(err)
@@ -118,10 +113,10 @@ func CreateReaction(c *fiber.Ctx) error {
 
 	mutation := &api.Mutation{
 		CommitNow: true,
-		SetJson:   reactionJson,
+		SetJson:   commentJson,
 	}
 
-	_, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
+	resp, err = dgraph.NewTxn().Mutate(context.Background(), mutation)
 
 	if err != nil {
 		log.Println(err)
@@ -129,6 +124,31 @@ func CreateReaction(c *fiber.Ctx) error {
 			"message": "An error occurred while processing that request",
 		})
 	}
+
+	postBody := struct {
+		UID   string `json:"uid"`
+		Asset []struct {
+			UID string `json:"uid"`
+		} `json:"assets"`
+	}{UID: postID}
+
+	x := struct {
+		UID string `json:"uid"`
+	}{resp.Uids["new"]}
+
+	postBody.Asset = append(postBody.Asset, x)
+
+	postBodyJson, err := json.Marshal(postBody)
+
+	if err != nil {
+		log.Println(err)
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
+
+	_, err = dgraph.NewTxn().Mutate(context.Background(), &api.Mutation{CommitNow: true, SetJson: postBodyJson})
 
 	if err != nil {
 		log.Println(err)
@@ -143,7 +163,7 @@ func CreateReaction(c *fiber.Ctx) error {
 	})
 }
 
-func DeleteReaction(c *fiber.Ctx) error {
+func DeleteAsset(c *fiber.Ctx) error {
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -158,20 +178,20 @@ func DeleteReaction(c *fiber.Ctx) error {
 		})
 	}
 
-	commentID := c.Params("id")
+	assetID := c.Params("id")
 
 	q :=
 		`
-		query Reaction($uid: string) {
-			reaction(func: uid($uid)) @normalize{
-				owner {
-					owner_uid: uid
+		query Asset($uid: string) {
+			asset(func: uid($uid)) {
+				author {
+					author_uid: uid
 				}
 			}
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": commentID})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": assetID})
 
 	if err != nil {
 		log.Println(err)
@@ -180,26 +200,27 @@ func DeleteReaction(c *fiber.Ctx) error {
 		})
 	}
 
-	reaction := struct {
+	asset := struct {
 		Result []struct {
-			OwnerUID string `json:"owner_uid"`
-		} `json:"reaction"`
+			AuthorUID string `json:"author_uid"`
+		} `json:"asset"`
 	}{}
 
-	err = json.Unmarshal(resp.Json, &reaction)
+	err = json.Unmarshal(resp.Json, &asset)
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "An error occurred while processing that request",
 		})
 	}
 
-	if len(reaction.Result) == 0 {
+	if len(asset.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "The resource doesn't exist on this server",
 		})
 	}
 
-	if reaction.Result[0].OwnerUID != uid {
+	if asset.Result[0].AuthorUID != uid {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"message": "Forbidden",
 		})

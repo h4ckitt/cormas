@@ -11,5 +11,5 @@ func setupCommentRoutes(router fiber.Router) {
 	commentGroup.Post("/", authRequired(), controllers.CreateComment)
 	commentGroup.Delete("/:id", authRequired(), controllers.DeleteComment)
 	commentGroup.Patch("/:id", authRequired(), controllers.UpdateComment)
-
+	commentGroup.Get("/all", controllers.ListComments)
 }

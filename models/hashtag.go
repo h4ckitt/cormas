@@ -1,5 +1,7 @@
 package models
 
 type HashTag struct {
-	Name string `json:"name"`
+	UID  string `json:"uid,omitempty"`
+	Name string `json:"name,omitempty"`
+	Type string `json:"dgraph.type,omitempty"`
 }
