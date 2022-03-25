@@ -72,7 +72,12 @@ func CreateComment(c *fiber.Ctx) error {
 		} `json:"post"`
 	}{}
 
-	json.Unmarshal(resp.Json, &post)
+	err = json.Unmarshal(resp.Json, &post)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	if len(post.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -187,7 +192,12 @@ func UpdateComment(c *fiber.Ctx) error {
 		} `json:"comment"`
 	}{}
 
-	json.Unmarshal(resp.Json, &comment)
+	err = json.Unmarshal(resp.Json, &comment)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	if len(comment.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -285,7 +295,12 @@ func DeleteComment(c *fiber.Ctx) error {
 		} `json:"comment"`
 	}{}
 
-	json.Unmarshal(resp.Json, &comment)
+	err = json.Unmarshal(resp.Json, &comment)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	if len(comment.Result) == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -324,7 +339,6 @@ func DeleteComment(c *fiber.Ctx) error {
 }
 
 func ListComments(c *fiber.Ctx) error {
-
 	postID := c.Params("id")
 
 	q :=
@@ -360,7 +374,12 @@ func ListComments(c *fiber.Ctx) error {
 		Result []models.Comment `json:"comments"`
 	}{}
 
-	json.Unmarshal(resp.Json, &comments)
+	err = json.Unmarshal(resp.Json, &comments)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "An error occurred while processing that request",
+		})
+	}
 
 	return c.Status(fiber.StatusOK).JSON(comments)
 }
