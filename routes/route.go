@@ -12,7 +12,6 @@ func InitRouter() *fiber.App {
 
 	v1 := app.Group("/v1")
 
-	//setupAnswerRoutes(v1)
 	setupUserRoutes(v1)
 	setupPostRoutes(v1)
 	setupCurrencyRoutes(v1)
@@ -23,6 +22,7 @@ func InitRouter() *fiber.App {
 	setupBankRoutes(v1)
 	setupReactionRoutes(v1)
 	setupGroupRoutes(v1)
+	setupTagRoutes(v1)
 
 	return app
 }
