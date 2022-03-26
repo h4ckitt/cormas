@@ -498,6 +498,8 @@ func CreateSchema() {
 			type Review {
 				name
 				description
+				created_at
+				updated_at
 				moderation
 				rating
 				product: Product
