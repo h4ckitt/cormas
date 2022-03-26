@@ -13,6 +13,11 @@ import (
 )
 
 func CreateComment(c *fiber.Ctx) error {
+	var (
+		q        string
+		dataType interface{}
+		Type     string
+	)
 	uid, err := utils.GetJWTUser(c.Locals("user").(*jwt.Token))
 
 	if err != nil {
@@ -36,27 +41,63 @@ func CreateComment(c *fiber.Ctx) error {
 		})
 	}
 
-	if comment.Description == "" || comment.EntityUID == "" {
+	if comment.Description == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Bad request body was received",
 		})
 	}
 
-	entityID := comment.EntityUID
+	comment.Author = struct {
+		UID string `json:"uid"`
+	}{uid}
+	now := time.Now().Format(time.RFC3339)
+	comment.CreatedAt, comment.UpdatedAt = now, now
+	comment.Type = "Comment"
 
-	q :=
+	tx := struct {
+		UID     string         `json:"uid"`
+		Comment models.Comment `json:"comments"`
+	}{Comment: *comment}
+
+	if comment.Post != nil {
+		dataType = *(comment.Post)
+		Type = "Post"
+	} else if comment.Question != nil {
+		dataType = *(comment.Question)
+		Type = "Question"
+	}
+
+	if uid, ok := dataType.(string); ok {
+		tx.UID = uid
+
+		switch Type {
+		case "Post":
+			*(tx.Comment.Post) = struct {
+				UID string `json:"uid"`
+			}{uid}
+
+		case "Question":
+			*(tx.Comment.Question) = struct {
+				UID string `json:"uid"`
+			}{uid}
+		}
+	} else {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Bad request body received",
+		})
+	}
+
+	q =
 		`
-		query Post($uid: string) {
-			post(func: uid($uid)) @normalize{
-				name: name
-				author {
-					author_uid: uid
-				}
+		query DB($uid: string) {
+			entity(func: uid($uid)) {
+				name
+				dgraph.type
 			}
 		}
 		`
 
-	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": entityID})
+	resp, err := dgraph.NewTxn().QueryWithVars(context.Background(), q, map[string]string{"$uid": tx.UID})
 
 	if err != nil {
 		log.Println(err)
@@ -67,9 +108,9 @@ func CreateComment(c *fiber.Ctx) error {
 
 	post := struct {
 		Result []struct {
-			Name      string `json:"name"`
-			AuthorUID string `json:"author_uid"`
-		} `json:"post"`
+			Name string   `json:"name"`
+			Type []string `json:"dgraph.type"`
+		} `json:"entity"`
 	}{}
 
 	err = json.Unmarshal(resp.Json, &post)
@@ -79,31 +120,11 @@ func CreateComment(c *fiber.Ctx) error {
 		})
 	}
 
-	if len(post.Result) == 0 {
+	if len(post.Result) == 0 || post.Result[0].Type[0] != Type {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "The resource doesn't exist on this server",
 		})
 	}
-
-	if post.Result[0].AuthorUID != uid {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"message": "Forbidden",
-		})
-	}
-
-	comment.UID = "_:new"
-	comment.Author = struct {
-		UID string `json:"uid"`
-	}{uid}
-	now := time.Now().Format(time.RFC3339)
-	comment.CreatedAt, comment.UpdatedAt = now, now
-	comment.EntityUID = "" //Set This To Empty Because It's Not Needed In The Database
-	comment.Type = "Comment"
-
-	tx := struct {
-		UID     string         `json:"uid"`
-		Comment models.Comment `json:"comments"`
-	}{entityID, *comment}
 
 	commentJson, err := json.Marshal(tx)
 
@@ -316,7 +337,7 @@ func DeleteComment(c *fiber.Ctx) error {
 
 	tbdJson, err := json.Marshal(struct {
 		UID string `json:"uid"`
-	}{uid})
+	}{commentID})
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
