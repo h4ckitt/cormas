@@ -32,7 +32,7 @@ func CreateProduct(c *fiber.Ctx) error {
 	if err := c.BodyParser(&product); err != nil {
 		log.Println(err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Baf request body received",
+			"message": "Bad request body received",
 		})
 	}
 
@@ -57,8 +57,6 @@ func CreateProduct(c *fiber.Ctx) error {
 	}{uid, *product}
 
 	productJson, err := json.Marshal(tx)
-
-	fmt.Println(string(productJson))
 
 	if err != nil {
 		log.Println(err)

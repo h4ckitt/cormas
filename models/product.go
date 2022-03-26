@@ -7,7 +7,7 @@ type Product struct {
 	Currency     *Currency `json:"currency"`
 	Category     *Category `json:"category"`
 	//This Should Be A Reverse Relationship To Order Table
-	Reviews               *[]Review   `json:"review,omitempty"`
+	Reviews               *[]Review   `json:"reviews,omitempty"`
 	ProductType           int         `json:"type"`
 	Supported             int         `json:"supported"`
 	Downloadable          *[]Asset    `json:"downloadable,omitempty"`

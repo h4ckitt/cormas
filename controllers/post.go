@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -42,19 +41,17 @@ func CreatePost(c *fiber.Ctx) error {
 		})
 	}
 
-	author := struct {
-		UID string `json:"uid"`
-	}{uid}
-
 	now := time.Now().Format(time.RFC3339)
 
-	post.Author = author
+	post.Author = struct {
+		UID string `json:"uid"`
+	}{uid}
 	post.CreatedAt = now
 	post.UpdatedAt = now
 	post.Type = "Post"
 
+	// This Basically Loops Through The Post Tags And Checks If Db Tags Exist With The Same Name
 	for index, tag := range *post.Tags {
-		fmt.Println(tag)
 		var (
 			uid string
 			err error
