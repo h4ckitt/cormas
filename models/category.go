@@ -7,5 +7,6 @@ type Category struct {
 	Status     int    `json:"status"`
 	//Relationship To Product Should Be Reverse
 	//Relationship To Author/Business Should Be Reverse
-	Child *[]Category `json:"child"`
+	Child *[]Category `json:"child,omitempty"`
+	Type  string      `json:"dgraph.type,omitempty"`
 }
